@@ -1,0 +1,12 @@
+; This is an example config for the lsms server.
+
+[Network]
+ListenTo = ":8080"
+[Crypto]
+Enabled = false
+Certificate = "./certfile.pem"
+KeyFile = "./keyfile.key"
+[Database]
+Path = "./db.sql"
+[Logging]
+Level = "Info"
