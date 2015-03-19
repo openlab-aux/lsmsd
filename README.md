@@ -1,4 +1,4 @@
-lsmsd - leightweight storage management system daemon
+lsmsd - lightweight storage management system daemon
 ===========
 lsmsd is a storage management system designed for our local hackerspace.
 ___
