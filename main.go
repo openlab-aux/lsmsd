@@ -56,6 +56,7 @@ const (
 	DEFAULT_CRYPTO          = false
 	DEFAULT_CERTIFICATE     = "./cert.pem"
 	DEFAULT_KEYFILE         = "keyfile.key"
+	DEFAULT_DATABASE        = "./lsms.sql"
 )
 
 func main() {
@@ -67,6 +68,7 @@ func main() {
 	var enable_crypto = flag.Bool("enablecrypto", DEFAULT_CRYPTO, "Use TLS instead of plain text")
 	var certificate = flag.String("certificate", DEFAULT_CERTIFICATE, "certificate path")
 	var keyfile = flag.String("keyfile", DEFAULT_KEYFILE, "private key path")
+	var dbpath = flag.String("dbpath", DEFAULT_DATABASE, "path to your database file")
 	flag.Parse()
 	err := gcfg.ReadFileInto(&cfg, *configpath)
 
@@ -88,6 +90,9 @@ func main() {
 	}
 	if *keyfile != DEFAULT_KEYFILE {
 		cfg.Crypto.KeyFile = *keyfile
+	}
+	if *dbpath != DEFAULT_DATABASE {
+		cfg.Database.Path = *dbpath
 	}
 
 	switch cfg.Logging.Level {
