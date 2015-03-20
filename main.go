@@ -26,7 +26,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/openlab-aux/lsms/backend"
+	"github.com/openlab-aux/lsmsd/backend"
 	"net/http"
 	//	"time"
 	"code.google.com/p/gcfg"
