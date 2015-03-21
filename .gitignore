@@ -28,7 +28,7 @@ _testmain.go
 *~
 
 *.sql
-
+config.gcfg
 # Texteditor-specific stuff
 .*.sw*
 *.sublime-project
