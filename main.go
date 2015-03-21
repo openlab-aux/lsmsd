@@ -24,7 +24,7 @@ import (
 	//	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
-	//"github.com/openlab-aux/lsmsd/backend"
+	"github.com/openlab-aux/lsmsd/backend"
 	"net/http"
 	//	"time"
 	"code.google.com/p/gcfg"
@@ -42,7 +42,7 @@ type Config struct {
 	}
 	Database struct {
 		Server string
-		Prefix string
+		DB     string
 	}
 	Logging struct {
 		Level string
@@ -57,7 +57,7 @@ const (
 	DEFAULT_CERTIFICATE     = "./cert.pem"
 	DEFAULT_KEYFILE         = "keyfile.key"
 	DEFAULT_DATABASE_SERVER = "localhost"
-	DEFAULT_DATABASE_PREFIX = "lsmsd_"
+	DEFAULT_DATABASE_DB     = "lsmsd"
 )
 
 func main() {
@@ -70,7 +70,7 @@ func main() {
 	var certificate = flag.String("certificate", DEFAULT_CERTIFICATE, "certificate path")
 	var keyfile = flag.String("keyfile", DEFAULT_KEYFILE, "private key path")
 	var dbserver = flag.String("dbserver", DEFAULT_DATABASE_SERVER, "address of your mongo db server")
-	var dbprefix = flag.String("dbprefix", DEFAULT_DATABASE_PREFIX, "default database prefix")
+	var dbdb = flag.String("dbdb", DEFAULT_DATABASE_DB, "default database name")
 	flag.Parse()
 	err := gcfg.ReadFileInto(&cfg, *configpath)
 
@@ -96,8 +96,8 @@ func main() {
 	if *dbserver != DEFAULT_DATABASE_SERVER {
 		cfg.Database.Server = *dbserver
 	}
-	if *dbprefix != DEFAULT_DATABASE_PREFIX {
-		cfg.Database.Prefix = *dbprefix
+	if *dbdb != DEFAULT_DATABASE_DB {
+		cfg.Database.DB = *dbdb
 	}
 
 	switch cfg.Logging.Level {
@@ -112,12 +112,12 @@ func main() {
 		log.Fatal(err)
 	}
 	log.Info("Connection successful")
-	s.Close()
+	defer s.Close()
 
-	//	backend.RegisterDatabase(cfg.Database.Server, cfg.Database.Prefix)
+	backend.RegisterDatabase(s, cfg.Database.DB)
 	restful.DefaultContainer.Filter(restful.DefaultContainer.OPTIONSFilter)
 	//	restful.Add(backend.NewItemService())
-	//	restful.Add(backend.NewUserService())
+	restful.Add(backend.NewUserService())
 	//	restful.Add(backend.NewPolicyService())
 
 	log.WithFields(log.Fields{"Address": cfg.Network.ListenTo, "TLS": cfg.Crypto.Enabled}).
