@@ -17,6 +17,7 @@ Code Documentation for this tool can be found at [godoc](http://godoc.org/github
 The following table will show you how to use this API, which errors it'll throw against you and where you can find the teapot.
 
 Every API-Call can drop a Internal Server Error. I won't mention it explicitly.
+
 | Path | Method | Parameter | Description | Error Codes | Auth Required | Admin Required |
 ---|---|---|---|---|---|---|
 | /item | GET | | List all available items (this may be replaced by a paginated version) | | | |
