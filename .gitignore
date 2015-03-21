@@ -2,7 +2,7 @@
 *.o
 *.a
 *.so
-lsms
+lsmsd
 
 # Folders
 _obj
