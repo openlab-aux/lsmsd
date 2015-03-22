@@ -150,8 +150,6 @@ func checkUserExistance(usr *User) bool {
 			return true // if something strange in the neighbourhood …
 			// what you gonna do? - do not register a new user!
 		}
-	} else {
-		return true
 	}
 	return true
 }
