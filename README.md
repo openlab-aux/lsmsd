@@ -23,7 +23,7 @@ Every API-Call can drop a Internal Server Error. Every API-Call which accepts JS
 | /item | GET | | List all available items (this may be replaced by a paginated version) | | | |
 | | GET | id | Returns a single item identified by its ID | 404: ID Invalid | | |
 | | POST | (body) Item | Insert a item into the database | | x | |
-| | PUT | (body) Item | Update the item. If ID is not present, create the item. | | x | |
+| | PUT | (body) Item | Update the item. | 404: Item not found | x | |
 | | DELETE | id | Delete a item | 404: ID Invalid | x | |
 | /user | GET | | Return details of the requesting user | | x | |
 | | POST | (body) User | Register a new user | 401: This username is not available | | |
