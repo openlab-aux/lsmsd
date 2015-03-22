@@ -16,7 +16,7 @@ Code Documentation for this tool can be found at [godoc](http://godoc.org/github
 
 The following table will show you how to use this API, which errors it'll throw against you and where you can find the teapot.
 
-Every API-Call can drop a Internal Server Error. I won't mention it explicitly.
+Every API-Call can drop a Internal Server Error. Every API-Call which accepts JSON/XML objects in the body may drop a 400 Bad Request when the object(s) are not parsable. I won't mention it explicitly.
 
 | Path | Method | Parameter | Description | Error Codes | Auth Required | Admin Required |
 ---|---|---|---|---|---|---|
@@ -27,7 +27,7 @@ Every API-Call can drop a Internal Server Error. I won't mention it explicitly.
 | | DELETE | id | Delete a item | 404: ID Invalid | x | |
 | /user | GET | | Return details of the requesting user | | x | |
 | | POST | (body) User | Register a new user | 401: This username is not available | | |
-| | PUT | (body) User | Update user information | | x | (x) |
+| | PUT | (body) User | Update user information | 404: User not found. Please register first | x | (x) |
 | | DELETE | | Delete the User | | x | (x) |
 | /policies | GET | | List all available policies (this may be replaced by a paginated version | | | |
 | | GET | id | Returns a single policy identified by its ID | 404: ID Invalid | | | |
