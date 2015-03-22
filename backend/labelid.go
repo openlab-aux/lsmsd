@@ -24,6 +24,7 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"sync"
+	"time"
 )
 
 type idgenerator struct {
@@ -53,9 +54,7 @@ func (i *idgenerator) StopIDGenerator() {
 	i.wg.Wait()
 }
 
-// get_next_id is a workaround function for an incrementing id with mongodb.
-// cs: chan<- int | status channel 1 -> exit
-// ci: chan<- <-chan int |
+// GenerateID is a blocking function to get a incrementing id
 func (i *idgenerator) GenerateID() uint64 {
 	res := make(chan uint64)
 	i.getID <- res
@@ -75,6 +74,9 @@ func (i *idgenerator) generateID() {
 			i.c.Insert(&counter{"", "item", 0})
 		}
 	}
+
+	hit := false
+
 	for {
 		select {
 		case _ = <-i.status:
@@ -82,6 +84,7 @@ func (i *idgenerator) generateID() {
 		default:
 			select {
 			case ret := <-i.getID:
+				hit = true
 				var temp counter
 				err := i.c.Find(bson.M{"type_": "item"}).One(&temp)
 				if err != nil {
@@ -98,5 +101,11 @@ func (i *idgenerator) generateID() {
 			}
 
 		}
+		if !hit { // Process all request every 75 Millisecond to save CPU time
+			time.Sleep(75 * time.Millisecond)
+		} else {
+			hit = false
+		}
+
 	}
 }
