@@ -115,8 +115,9 @@ func main() {
 	defer s.Close()
 
 	backend.RegisterDatabase(s, cfg.Database.DB)
+	defer backend.CloseIDGen()
 	restful.DefaultContainer.Filter(restful.DefaultContainer.OPTIONSFilter)
-	//	restful.Add(backend.NewItemService())
+	restful.Add(backend.NewItemService())
 	restful.Add(backend.NewUserService())
 	//	restful.Add(backend.NewPolicyService())
 
