@@ -16,24 +16,25 @@
  *
  *    Authors: Stefan Luecke <glaxx@glaxx.net>
  */
-
 package backend
 
 import (
 	//	"database/sql"
 	log "github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
-	"html/template"
+	//"html/template"
+	"gopkg.in/mgo.v2/bson"
 	"net/http"
 	"strconv"
-	"strings"
+	//"strings"
 )
 
 type Item struct {
-	ID          uint64
+	ID          bson.ObjectId `bson:"_id,omitempty" json:"-"`
+	EID         uint64
 	Name        string
 	Description string
-	Contains    []uint64
+	Contains    []bson.ObjectId
 	Owner       uint64
 	Maintainer  uint64
 	Usage       uint64
@@ -50,7 +51,6 @@ func NewItemService() *restful.WebService {
 	service.Route(service.GET("/{id}").To(GetItemById))
 	service.Route(service.GET("").To(ListItem))
 	service.Route(service.PUT("").To(UpdateItem))
-	service.Route(service.PUT("/{id}").To(UpdateItem))
 	service.Route(service.POST("").To(CreateItem))
 	service.Route(service.DELETE("/{id}").To(DeleteItem))
 	return service
@@ -58,7 +58,7 @@ func NewItemService() *restful.WebService {
 
 func GetItemById(request *restful.Request, response *restful.Response) {
 	sid := request.PathParameter("id")
-	log.WithFields(log.Fields{"Requested ID": sid}).Debug("Got Request")
+	log.WithFields(log.Fields{"Requested ID": sid, "Path": request.SelectedRoutePath()}).Debug("Got Request")
 	id, err := strconv.ParseUint(sid, 10, 64)
 	if err != nil {
 		response.WriteErrorString(http.StatusBadRequest, ERROR_INVALID_ID)
@@ -67,7 +67,7 @@ func GetItemById(request *restful.Request, response *restful.Response) {
 		return
 	}
 	itm, err := getItemById(id)
-	if err != nil || itm.ID == 0 {
+	if err != nil {
 		response.WriteErrorString(http.StatusBadRequest, ERROR_INVALID_ID)
 		log.WithFields(log.Fields{"Error Msg": err}).
 			Info(ERROR_INVALID_ID)
@@ -77,55 +77,9 @@ func GetItemById(request *restful.Request, response *restful.Response) {
 }
 
 func getItemById(id uint64) (Item, error) {
-	stmt, err := db.Prepare("SELECT * FROM item WHERE id=?;")
-	if err != nil {
-		log.WithFields(log.Fields{"Error Msg": err}).
-			Fatal(ERROR_STMT_PREPARE)
-	}
-	defer stmt.Close()
-	row := stmt.QueryRow(id)
-	itm := new(Item)
-	unpacked_string := ""
-	err = row.Scan(&itm.ID, &itm.Name, &itm.Description, &unpacked_string, &itm.Owner, &itm.Maintainer, &itm.Usage, &itm.Discard)
-	if err != nil {
-		log.WithFields(log.Fields{"Error Msg": err}).
-			Warn("Scan Error")
-	}
-	itm.Contains = unpack_contains(unpacked_string)
-	return *itm, nil
-}
-
-func unpack_contains(input string) []uint64 {
-	ids := strings.Split(input, ";")
-
-	if len(ids) <= 1 {
-		return make([]uint64, 0)
-	}
-	res := make([]uint64, len(ids))
-	for i := 0; i != len(ids); i++ {
-		log.WithFields(log.Fields{"String": ids[i], "length": len(ids), "i": i}).Debug("Trying to parse string")
-		temp, err := strconv.ParseUint(ids[i], 10, 64)
-		if err != nil {
-			log.WithFields(log.Fields{"Error Msg": err}).
-				Warn("Failed to unpack 'Contains' string")
-		}
-		res[i] = temp
-	}
-	return res
-}
-
-func pack_contains(input []uint64) string {
-	if len(input) == 0 {
-		return ""
-	}
-	if len(input) == 1 {
-		return strconv.FormatUint(input[0], 10)
-	}
-	str := ""
-	for i := 0; i != len(input); i++ {
-		str = str + strconv.FormatUint(input[i], 10) + ";"
-	}
-	return str
+	res := Item{}
+	err := iCol.Find(bson.M{"eid": id}).One(&res)
+	return res, err
 }
 
 func CreateItem(request *restful.Request, response *restful.Response) {
@@ -147,26 +101,10 @@ func CreateItem(request *restful.Request, response *restful.Response) {
 }
 
 func createItem(itm *Item) (uint64, error) {
-	stmt, err := db.Prepare(`
-		INSERT INTO item ('name', 'description', 'contains', 'owner', 'maintainer', 'usage', 'discard') VALUES (?, ?, ?, ?, ?, ?, ?);`)
-	if err != nil {
-		log.WithFields(log.Fields{"Error Msg": err}).Fatal(ERROR_STMT_PREPARE)
-		return 0, err
-	}
-	defer stmt.Close()
-	res, err := stmt.Exec(template.HTMLEscapeString(itm.Name), template.HTMLEscapeString(itm.Description), pack_contains(itm.Contains), itm.Owner, itm.Maintainer, itm.Usage, itm.Discard)
-	if err != nil {
-		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_INSERT)
-		return 0, err
-	}
-
-	id, err := res.LastInsertId()
-	if err != nil {
-		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_QUERY)
-		return 0, err
-	}
-
-	return uint64(id), nil
+	itm.EID = idgen.GenerateID()
+	log.WithFields(log.Fields{"ID": itm.EID}).Debug("Generated ID")
+	err := iCol.Insert(itm)
+	return itm.EID, err
 }
 
 func ListItem(request *restful.Request, response *restful.Response) {
@@ -180,28 +118,9 @@ func ListItem(request *restful.Request, response *restful.Response) {
 }
 
 func listItem() ([]Item, error) {
-	stmt, err := db.Prepare(`
-		SELECT * FROM item;`)
-	if err != nil {
-		log.WithFields(log.Fields{"Error Msg": err}).Fatal(ERROR_STMT_PREPARE)
-		return nil, err
-	}
-	defer stmt.Close()
-	rows, err := stmt.Query()
-	if err != nil {
-		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_INTERNAL)
-		return nil, err
-	}
-	result := make([]Item, 0)
-	for rows.Next() {
-		temp := new(Item) // Item{0, "", make([]uint64, 0), 0, 0, 0, 0)
-		str := ""
-		rows.Scan(&temp.ID, &temp.Name, &temp.Description, &str, &temp.Owner, &temp.Maintainer, &temp.Usage, &temp.Discard)
-		temp.Contains = unpack_contains(str)
-		result = append(result, *temp)
-	}
-
-	return result, nil
+	itm := make([]Item, 0)
+	err := iCol.Find(nil).All(&itm)
+	return itm, err
 }
 
 func UpdateItem(request *restful.Request, response *restful.Response) {
@@ -212,55 +131,39 @@ func UpdateItem(request *restful.Request, response *restful.Response) {
 		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_INTERNAL)
 		return
 	}
-	stmt, err := db.Prepare(`
-		SELECT * FROM item ORDER BY id DESC LIMIT 0, 1;`)
-	if err != nil {
-		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
-		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_INTERNAL)
-		return
-	}
-	defer stmt.Close()
-	row := stmt.QueryRow()
-	var id uint64
-	temp := new(Item)
-	temp2 := ""
-	err = row.Scan(&id, &temp.Name, &temp.Description, &temp2, &temp.Owner, &temp.Maintainer, &temp.Usage, &temp.Discard)
-
-	if err != nil {
-		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
-		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_INTERNAL)
-		return
-	}
-
-	log.WithFields(log.Fields{"Id": id}).Debug("Highest ID")
-
-	if itm.ID <= id {
-		err := updateItem(itm)
+	ex := checkItemExistance(itm)
+	if ex {
+		err = updateItem(itm)
 		if err != nil {
 			response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
+			log.WithFields(log.Fields{"Err": err}).Warn("Error while updating Item")
 			return
-		} else {
-			response.WriteEntity(true)
 		}
+		response.WriteEntity(true)
+		return
 	} else {
-		CreateItem(request, response)
+		response.WriteErrorString(http.StatusNotFound, "Item not found")
+		return
 	}
 }
 
 func updateItem(itm *Item) error {
-	stmt, err := db.Prepare(`
-		UPDATE item SET name=?, description=?, contains=?, owner=?, maintainer=?, usage=?, discard=? WHERE id=?;`)
+	return iCol.Update(bson.M{"eid": itm.EID}, itm)
+}
+
+func checkItemExistance(itm *Item) bool {
+	temp := Item{}
+	err := iCol.Find(bson.M{"eid": itm.EID}).One(&temp)
 	if err != nil {
-		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_INTERNAL)
-		return err
+		if err.Error() == "not found" {
+			return false
+		} else {
+			log.WithFields(log.Fields{"Err": err}).
+				Debug("TODO: check more error codes here")
+			return true
+		}
 	}
-	defer stmt.Close()
-	_, err = stmt.Exec(template.HTMLEscapeString(itm.Name), template.HTMLEscapeString(itm.Description), pack_contains(itm.Contains), itm.Owner, itm.Maintainer, itm.Usage, itm.Discard, itm.ID)
-	if err != nil {
-		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_INTERNAL)
-		return err
-	}
-	return nil
+	return true
 }
 
 func DeleteItem(request *restful.Request, response *restful.Response) {
@@ -268,12 +171,17 @@ func DeleteItem(request *restful.Request, response *restful.Response) {
 	id, err := strconv.ParseUint(sid, 10, 64)
 	if err != nil {
 		log.WithFields(log.Fields{"Error Msg": err}).Info(ERROR_INVALID_ID)
-		response.WriteErrorString(http.StatusBadRequest, ERROR_INVALID_ID)
+		response.WriteErrorString(http.StatusNotFound, ERROR_INVALID_ID)
 		return
 	}
 
 	err = deleteItem(id)
 	if err != nil {
+		if err.Error() == "not found" {
+			log.WithFields(log.Fields{"ID": id}).Info(ERROR_INVALID_ID)
+			response.WriteErrorString(http.StatusNotFound, ERROR_INVALID_ID)
+			return
+		}
 		log.WithFields(log.Fields{"Error Msg": err}).Info(ERROR_INTERNAL)
 		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
 		return
@@ -282,16 +190,5 @@ func DeleteItem(request *restful.Request, response *restful.Response) {
 }
 
 func deleteItem(id uint64) error {
-	stmt, err := db.Prepare(`
-		DELETE FROM item WHERE id=?;
-		`)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-	_, err = stmt.Exec(id)
-	if err != nil {
-		return err
-	}
-	return nil
+	return iCol.Remove(bson.M{"eid": id})
 }
