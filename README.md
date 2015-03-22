@@ -26,7 +26,7 @@ Every API-Call can drop a Internal Server Error. I won't mention it explicitly.
 | | PUT | (body) Item | Update the item. If ID is not present, create the item. | | x | |
 | | DELETE | id | Delete a item | 404: ID Invalid | x | |
 | /user | GET | | Return details of the requesting user | | x | |
-| | POST | (body) User | Register a new user | | | |
+| | POST | (body) User | Register a new user | 401: This username is not available | | |
 | | PUT | (body) User | Update user information | | x | (x) |
 | | DELETE | | Delete the User | | x | (x) |
 | /policies | GET | | List all available policies (this may be replaced by a paginated version | | | |
