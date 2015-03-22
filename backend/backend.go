@@ -36,6 +36,7 @@ var db *mgo.Session
 
 var uCol *mgo.Collection
 var iCol *mgo.Collection
+var pCol *mgo.Collection
 
 var idgen *idgenerator
 
@@ -43,6 +44,7 @@ func RegisterDatabase(s *mgo.Session, dbname string) {
 	db = s
 	uCol = s.DB(dbname).C("user")
 	iCol = s.DB(dbname).C("item")
+	pCol = s.DB(dbname).C("policy")
 	idgen = NewIDGenerator(s.DB(dbname).C("counters"))
 }
 
