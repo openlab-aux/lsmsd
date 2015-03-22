@@ -20,16 +20,15 @@
 package main
 
 import (
-	"database/sql"
 	"flag"
 	//	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/openlab-aux/lsmsd/backend"
 	"net/http"
 	//	"time"
 	"code.google.com/p/gcfg"
+	"gopkg.in/mgo.v2"
 )
 
 type Config struct {
@@ -42,7 +41,8 @@ type Config struct {
 		KeyFile     string
 	}
 	Database struct {
-		Path string
+		Server string
+		DB     string
 	}
 	Logging struct {
 		Level string
@@ -56,7 +56,8 @@ const (
 	DEFAULT_CRYPTO          = false
 	DEFAULT_CERTIFICATE     = "./cert.pem"
 	DEFAULT_KEYFILE         = "keyfile.key"
-	DEFAULT_DATABASE        = "./lsms.sql"
+	DEFAULT_DATABASE_SERVER = "localhost"
+	DEFAULT_DATABASE_DB     = "lsmsd"
 )
 
 func main() {
@@ -68,7 +69,8 @@ func main() {
 	var enable_crypto = flag.Bool("enablecrypto", DEFAULT_CRYPTO, "Use TLS instead of plain text")
 	var certificate = flag.String("certificate", DEFAULT_CERTIFICATE, "certificate path")
 	var keyfile = flag.String("keyfile", DEFAULT_KEYFILE, "private key path")
-	var dbpath = flag.String("dbpath", DEFAULT_DATABASE, "path to your database file")
+	var dbserver = flag.String("dbserver", DEFAULT_DATABASE_SERVER, "address of your mongo db server")
+	var dbdb = flag.String("dbdb", DEFAULT_DATABASE_DB, "default database name")
 	flag.Parse()
 	err := gcfg.ReadFileInto(&cfg, *configpath)
 
@@ -91,8 +93,11 @@ func main() {
 	if *keyfile != DEFAULT_KEYFILE {
 		cfg.Crypto.KeyFile = *keyfile
 	}
-	if *dbpath != DEFAULT_DATABASE {
-		cfg.Database.Path = *dbpath
+	if *dbserver != DEFAULT_DATABASE_SERVER {
+		cfg.Database.Server = *dbserver
+	}
+	if *dbdb != DEFAULT_DATABASE_DB {
+		cfg.Database.DB = *dbdb
 	}
 
 	switch cfg.Logging.Level {
@@ -100,16 +105,21 @@ func main() {
 		log.SetLevel(log.DebugLevel)
 	}
 
-	db, err := sql.Open("sqlite3", cfg.Database.Path)
+	// Test DB Connection
+	log.Info("Test database connection …")
+	s, err := mgo.Dial(cfg.Database.Server)
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Info("Connection successful")
+	defer s.Close()
 
-	backend.RegisterDatabase(db)
+	backend.RegisterDatabase(s, cfg.Database.DB)
+	defer backend.CloseIDGen()
 	restful.DefaultContainer.Filter(restful.DefaultContainer.OPTIONSFilter)
 	restful.Add(backend.NewItemService())
 	restful.Add(backend.NewUserService())
-	restful.Add(backend.NewPolicyService())
+	//	restful.Add(backend.NewPolicyService())
 
 	log.WithFields(log.Fields{"Address": cfg.Network.ListenTo, "TLS": cfg.Crypto.Enabled}).
 		Info("lsms started successfully")

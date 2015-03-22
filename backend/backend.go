@@ -20,13 +20,10 @@
 package backend
 
 import (
-	"database/sql"
-	"fmt"
-	log "github.com/Sirupsen/logrus"
+	"gopkg.in/mgo.v2"
 )
 
 const (
-	DBVERSION           = 1
 	ERROR_INVALID_ID    = "Error: Invalid ID"
 	ERROR_STMT_PREPARE  = "Error: Statement prepare failed"
 	ERROR_INVALID_INPUT = "ERROR: Invalid Input"
@@ -35,105 +32,22 @@ const (
 	ERROR_QUERY         = "Error: DB Query failed"
 )
 
-var db *sql.DB
+var db *mgo.Session
 
-func RegisterDatabase(d *sql.DB) {
-	db = d
-	chk := checkDatabase(db)
-	log.WithFields(log.Fields{"Tables": chk}).Debug("chkDB")
-	if chk == 0 {
-		log.Warning("Database empty - Ignore if this is the first start")
-		err := createTableMeta(db)
-		if err != nil {
-			log.Fatal(err)
-		}
-		err = createMisc(db)
-		if err != nil {
-			log.Fatal(err)
-		}
-		return
-	} else if chk != 4 {
-		log.Fatal("Database corrupt")
-	}
-	log.WithFields(log.Fields{"Version": getDatabaseVersion(db)}).Info("Found Database")
+var uCol *mgo.Collection
+var iCol *mgo.Collection
+var pCol *mgo.Collection
+
+var idgen *idgenerator
+
+func RegisterDatabase(s *mgo.Session, dbname string) {
+	db = s
+	uCol = s.DB(dbname).C("user")
+	iCol = s.DB(dbname).C("item")
+	pCol = s.DB(dbname).C("policy")
+	idgen = NewIDGenerator(s.DB(dbname).C("counters"))
 }
 
-func getDatabaseVersion(db *sql.DB) int {
-	stmt, err := db.Prepare("SELECT dbversion FROM metainf;")
-	if err != nil {
-		log.Fatal(err)
-	}
-	result := 0
-	err = stmt.QueryRow().Scan(&result)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return result
-}
-
-// returns # of tables & dbver
-func checkDatabase(db *sql.DB) int {
-	names := [...]string{"item", "metainf", "user", "policies"}
-	stmt, err := db.Prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?;")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer stmt.Close()
-	cnt := 0
-	for _, n := range names {
-		rows, err := stmt.Query(n)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer rows.Close()
-		for rows.Next() {
-			cnt++
-		}
-		log.WithFields(log.Fields{"Error": err, "cnt": cnt, "n": n}).Debug("ckDBQuery")
-	}
-	return cnt
-}
-
-func createTableMeta(db *sql.DB) error {
-	createMeta := fmt.Sprintf(`
-        CREATE TABLE 'metainf' (
-            'dbversion' INTEGER
-        );
-        INSERT INTO metainf(dbversion)
-        VALUES("%v");
-        `, DBVERSION)
-	_, err := db.Exec(createMeta)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func createMisc(db *sql.DB) error {
-	createMisc := `
-        CREATE TABLE 'item' (
-            'id' INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-            'name' TEXT,
-            'description' TEXT,
-			'contains' TEXT,
-			'owner'	INTEGER,
-			'maintainer' INTEGER,
-			'usage' INTEGER,
-			'discard' INTEGER
-        );
-        CREATE TABLE 'user' (
-            'id' INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-            'name' TEXT
-        );
-		CREATE TABLE 'policies' (
-			'id' INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-			'name' TEXT,
-			'description' TEXT
-		);
-        `
-	_, err := db.Exec(createMisc)
-	if err != nil {
-		return err
-	}
-	return err
+func CloseIDGen() {
+	idgen.StopIDGenerator()
 }
