@@ -22,15 +22,17 @@ package backend
 import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
-	"html/template"
+	//"html/template"
 	"net/http"
-	"strconv"
+	//"strconv"
 	//"strings"
+	"gopkg.in/mgo.v2/bson"
 )
 
 type User struct {
-	ID   uint64
-	Name string
+	ID    bson.ObjectId `bson:"_id,omitempty" json:"-"`
+	Name  string
+	EMail string
 }
 
 func NewUserService() *restful.WebService {
@@ -40,25 +42,18 @@ func NewUserService() *restful.WebService {
 		Consumes(restful.MIME_JSON, restful.MIME_XML).
 		Produces(restful.MIME_JSON, restful.MIME_XML)
 
-	service.Route(service.GET("/{id}").To(GetUserById))
+	service.Route(service.GET("/{name}").To(GetUserByName))
 	service.Route(service.GET("").To(ListUser))
 	service.Route(service.PUT("").To(UpdateUser))
-	service.Route(service.PUT("/{id}").To(UpdateUser))
 	service.Route(service.POST("").To(CreateUser))
-	service.Route(service.DELETE("/{id}").To(DeleteUser))
+	service.Route(service.DELETE("/{name}").To(DeleteUser))
 	return service
 }
 
-func GetUserById(request *restful.Request, response *restful.Response) {
-	sid := request.PathParameter("id")
-	id, err := strconv.ParseUint(sid, 10, 64)
+func GetUserByName(request *restful.Request, response *restful.Response) {
+	name := request.PathParameter("name")
+	user, err := getUserByName(name)
 	if err != nil {
-		response.WriteErrorString(http.StatusBadRequest, ERROR_INVALID_ID)
-		log.WithFields(log.Fields{"Error Msg": err}).Info(ERROR_INVALID_ID)
-		return
-	}
-	user, err := getUserById(id)
-	if err != nil || user.ID == 0 {
 		response.WriteErrorString(http.StatusBadRequest, ERROR_INVALID_ID)
 		log.WithFields(log.Fields{"Error Msg": err}).
 			Info(ERROR_INVALID_ID)
@@ -67,21 +62,10 @@ func GetUserById(request *restful.Request, response *restful.Response) {
 	response.WriteEntity(user)
 }
 
-func getUserById(id uint64) (User, error) {
-	stmt, err := db.Prepare("SELECT * FROM user WHERE id=?;")
-	if err != nil {
-		log.WithFields(log.Fields{"Error Msg": err}).
-			Fatal(ERROR_STMT_PREPARE)
-	}
-	defer stmt.Close()
-	row := stmt.QueryRow(id)
-	user := new(User)
-	err = row.Scan(&user.ID, &user.Name)
-	if err != nil {
-		log.WithFields(log.Fields{"Error Msg": err}).
-			Warn("Scan Error")
-	}
-	return *user, nil
+func getUserByName(name string) (User, error) {
+	res := User{}
+	err := uCol.Find(bson.M{"name": name}).One(&res)
+	return res, err
 }
 
 func ListUser(request *restful.Request, response *restful.Response) {
@@ -95,130 +79,91 @@ func ListUser(request *restful.Request, response *restful.Response) {
 }
 
 func listUser() ([]User, error) {
-	stmt, err := db.Prepare("SELECT * FROM user;")
-	if err != nil {
-		log.WithFields(log.Fields{"Error Msg": err}).Fatal(ERROR_STMT_PREPARE)
-		return nil, err
-	}
-	defer stmt.Close()
-	rows, err := stmt.Query()
-	if err != nil {
-		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_INTERNAL)
-		return nil, err
-	}
-	result := make([]User, 0)
-	for rows.Next() {
-		temp := new(User)
-		rows.Scan(&temp.ID, &temp.Name)
-		result = append(result, *temp)
-	}
-
-	return result, nil
+	usr := make([]User, 0)
+	err := uCol.Find(nil).All(&usr)
+	return usr, err
 }
 
 func UpdateUser(request *restful.Request, response *restful.Response) {
 	usr := new(User)
 	err := request.ReadEntity(usr)
 	if err != nil {
-		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
-		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_INTERNAL)
+		response.WriteErrorString(http.StatusBadRequest, ERROR_INVALID_INPUT)
+		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_INVALID_INPUT)
 		return
 	}
-	stmt, err := db.Prepare(`
-		SELECT * FROM user ORDER BY id DESC LIMIT 0, 1;`)
-	if err != nil {
-		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
-		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_INTERNAL)
-		return
-	}
-	defer stmt.Close()
-	row := stmt.QueryRow()
-	var id uint64
-	temp := new(User)
-	err = row.Scan(&id, &temp.Name)
-	if err != nil {
-		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
-		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_INTERNAL)
-		return
-	}
-
-	log.WithFields(log.Fields{"Id": id}).Debug("Highest ID")
-
-	if usr.ID <= id {
-		err := updateUser(usr)
+	ex := checkUserExistance(usr)
+	if ex {
+		err = updateUser(usr)
 		if err != nil {
 			response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
+			log.WithFields(log.Fields{"Err": err}).Warn("Error while updating User")
 			return
-		} else {
-			response.WriteEntity(true)
 		}
+		response.WriteEntity(true)
+		return
 	} else {
-		CreateUser(request, response)
+		response.WriteErrorString(http.StatusNotFound, "User not found. Please register first")
+		return
 	}
 }
 
 func updateUser(usr *User) error {
-	stmt, err := db.Prepare(`UPDATE user SET name=? WHERE id=?;`)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-	_, err = stmt.Exec(template.HTMLEscapeString(usr.Name), usr.ID)
-	if err != nil {
-		return err
-	}
-	return nil
+	return uCol.Update(bson.M{"name": usr.Name}, usr)
 }
 
 func CreateUser(request *restful.Request, response *restful.Response) {
 	usr := new(User)
 	err := request.ReadEntity(usr)
+	log.WithFields(log.Fields{"Username": usr.Name}).Info("Attempted user registration")
 	if err != nil {
 		response.WriteErrorString(http.StatusBadRequest, ERROR_INVALID_INPUT)
 		log.WithFields(log.Fields{"Error Msg": err}).Info(ERROR_INVALID_INPUT)
 		return
 	}
 
-	id, err := createUser(usr)
+	ex := checkUserExistance(usr)
+
+	if ex {
+		response.WriteErrorString(http.StatusUnauthorized, "This username is not available")
+		return
+	}
+
+	err = createUser(usr)
 	if err != nil {
 		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
 		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_INTERNAL)
 		return
 	}
-	response.WriteEntity("/user/" + strconv.FormatUint(id, 10))
+	response.WriteEntity("/user/" + usr.Name)
 }
 
-func createUser(usr *User) (uint64, error) {
-	stmt, err := db.Prepare(`
-		INSERT INTO user ('name') VALUES (?);`)
+func checkUserExistance(usr *User) bool {
+	temp := User{}
+	err := uCol.Find(bson.M{"name": usr.Name}).One(&temp)
 	if err != nil {
-		log.WithFields(log.Fields{"Error Msg": err}).Fatal(ERROR_STMT_PREPARE)
-		return 0, err
+		if err.Error() == "not found" {
+			return false
+		} else {
+			log.WithFields(log.Fields{"Err": err}).
+				Debug("TODO: check more error codes here")
+			return true // if something strange in the neighbourhood …
+			// what you gonna do? - do not register a new user!
+		}
+	} else {
+		return true
 	}
-	defer stmt.Close()
-	res, err := stmt.Exec(template.HTMLEscapeString(usr.Name))
-	if err != nil {
-		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_INSERT)
-		return 0, err
-	}
-	id, err := res.LastInsertId()
-	if err != nil {
-		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_QUERY)
-		return 0, err
-	}
-	return uint64(id), nil
+	return true
+}
+
+func createUser(usr *User) error {
+	return uCol.Insert(usr)
 }
 
 func DeleteUser(request *restful.Request, response *restful.Response) {
-	sid := request.PathParameter("id")
-	id, err := strconv.ParseUint(sid, 10, 64)
-	if err != nil {
-		log.WithFields(log.Fields{"Error Msg": err}).Info(ERROR_INVALID_ID)
-		response.WriteErrorString(http.StatusBadRequest, ERROR_INVALID_ID)
-		return
-	}
-
-	err = deleteUser(id)
+	name := request.PathParameter("name")
+	log.WithFields(log.Fields{"Name": name}).Info("Got user DELETE request")
+	err := deleteUser(name)
 	if err != nil {
 		log.WithFields(log.Fields{"Error Msg": err}).Info(ERROR_INTERNAL)
 		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
@@ -227,15 +172,6 @@ func DeleteUser(request *restful.Request, response *restful.Response) {
 	response.WriteEntity(true)
 }
 
-func deleteUser(id uint64) error {
-	stmt, err := db.Prepare("DELETE FROM user WHERE id=?;")
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-	_, err = stmt.Exec(id)
-	if err != nil {
-		return err
-	}
-	return nil
+func deleteUser(name string) error {
+	return uCol.Remove(bson.M{"name": name})
 }
