@@ -68,17 +68,15 @@ func ReadPepper(path string) {
 	}
 	defer f.Close()
 	fi, er := f.Stat()
-	err = er.(*os.PathError)
-	if err != nil {
-		log.Fatal(err)
+	if er != nil {
+		log.Fatal(er)
 	}
 	if fi.Size() != PEPPER_SIZE {
 		log.WithFields(log.Fields{"File Size": fi.Size(), "Expected Size": PEPPER_SIZE}).Fatal("Invalid pepper length - your file may be corrupt. Check your disk for errors.")
 	}
 	bytes, er := f.Read(pepper)
-	err = er.(*os.PathError)
-	if err != nil || bytes != PEPPER_SIZE {
-		log.WithFields(log.Fields{"Read": bytes, "Expected": PEPPER_SIZE}).Fatal(err)
+	if er != nil || bytes != PEPPER_SIZE {
+		log.WithFields(log.Fields{"Read": bytes, "Expected": PEPPER_SIZE}).Fatal(er)
 	}
 }
 
