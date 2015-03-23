@@ -26,7 +26,8 @@ _testmain.go
 *.pem
 
 *~
-
+# user files
+.pepper
 *.sql
 config.gcfg
 # Texteditor-specific stuff

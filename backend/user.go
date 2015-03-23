@@ -26,6 +26,7 @@ import (
 	"net/http"
 	//"strconv"
 	//"strings"
+	"crypto/sha512"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -33,6 +34,9 @@ type User struct {
 	ID    bson.ObjectId `bson:"_id,omitempty" json:"-"`
 	Name  string
 	EMail string
+
+	Password [sha512.Size]byte `json:"-"`
+	Salt     [64]byte          `json:"-"`
 }
 
 func NewUserService() *restful.WebService {
