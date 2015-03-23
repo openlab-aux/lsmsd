@@ -119,7 +119,7 @@ func main() {
 	restful.DefaultContainer.Filter(restful.DefaultContainer.OPTIONSFilter)
 	restful.Add(backend.NewItemService())
 	restful.Add(backend.NewUserService())
-	//	restful.Add(backend.NewPolicyService())
+	restful.Add(backend.NewPolicyService())
 
 	log.WithFields(log.Fields{"Address": cfg.Network.ListenTo, "TLS": cfg.Crypto.Enabled}).
 		Info("lsms started successfully")
