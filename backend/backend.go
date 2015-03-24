@@ -56,8 +56,8 @@ func RegisterDatabase(s *mgo.Session, dbname string) {
 
 func ReadPepper(path string) {
 	f, er := os.Open(path)
-	err := er.(*os.PathError)
-	if err != nil {
+	if er != nil {
+		err := er.(*os.PathError)
 		log.WithFields(log.Fields{"Path": err.Path, "Op": err.Op}).Debug(err.Err)
 		if err.Err.Error() == "no such file or directory" {
 			log.Warn("Pepper file not found - creating ...")
@@ -74,6 +74,7 @@ func ReadPepper(path string) {
 	if fi.Size() != PEPPER_SIZE {
 		log.WithFields(log.Fields{"File Size": fi.Size(), "Expected Size": PEPPER_SIZE}).Fatal("Invalid pepper length - your file may be corrupt. Check your disk for errors.")
 	}
+	pepper = make([]byte, PEPPER_SIZE)
 	bytes, er := f.Read(pepper)
 	if er != nil || bytes != PEPPER_SIZE {
 		log.WithFields(log.Fields{"Read": bytes, "Expected": PEPPER_SIZE}).Fatal(er)

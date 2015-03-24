@@ -96,6 +96,7 @@ func UpdateUser(request *restful.Request, response *restful.Response) {
 		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_INVALID_INPUT)
 		return
 	}
+
 	ex := checkUserExistance(usr)
 	if ex {
 		err = updateUser(usr)
