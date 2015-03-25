@@ -20,7 +20,7 @@
 package backend
 
 import (
-	//	"crypto/sha512"
+	"crypto/sha512"
 	log "github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
 	//	"gopkg.in/mgo.v2/bson"
@@ -35,4 +35,18 @@ func basicAuthFilter(request *restful.Request, response *restful.Response, chain
 		return
 	}
 	chain.ProcessFilter(request, response)
+}
+
+func createPwHash(pw, salt string) [sha512.Size]byte {
+	temp := make([]byte, len(pw)+len(salt)+len(pepper))
+	for i := 0; i != len(pw); i++ {
+		temp[i] = pw[i]
+	}
+	for i := 0; i != len(salt); i++ {
+		temp[i+len(pw)] = salt[i]
+	}
+	for i := 0; i != len(pepper); i++ {
+		temp[i+len(pw)+len(salt)] = pepper[i]
+	}
+	return sha512.Sum512(temp)
 }
