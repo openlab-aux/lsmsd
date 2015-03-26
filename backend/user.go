@@ -141,7 +141,20 @@ func UpdateUser(request *restful.Request, response *restful.Response) {
 
 	ex := checkUserExistance(usr)
 	if ex {
-		err = updateUser(usr)
+		if usr.Password != "" {
+			log.Debug("User supplied new password.")
+			err = usr.Secret.SetPassword(usr.Password)
+		} else {
+			temp, err := getUserByName(usr.Name)
+			if err != nil {
+			} else {
+				usr.Secret = temp.Secret // if no new password will be set, preserve old
+			}
+		}
+		if err != nil { //fall through to error handling
+		} else {
+			err = updateUser(usr)
+		}
 		if err != nil {
 			response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
 			log.WithFields(log.Fields{"Err": err}).Warn("Error while updating User")
