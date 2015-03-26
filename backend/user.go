@@ -46,12 +46,27 @@ type Secret struct {
 	Salt     [64]byte          `json:"-"`
 }
 
+func (s *Secret) VerifyPassword(pw string) bool {
+	input := s.assemblePassword(pw)
+	for i := 0; i != len(s.Password); i++ {
+		if s.Password[i] != input[i] {
+			return false
+		}
+	}
+	return true
+}
+
 func (s *Secret) SetPassword(pw string) error {
 	err := s.genSalt()
 	if err != nil {
 		return err
 	}
 
+	s.Password = s.assemblePassword(pw)
+	return nil
+}
+
+func (s *Secret) assemblePassword(pw string) [sha512.Size]byte {
 	temp := make([]byte, len(pw)+len(s.Salt)+len(pepper))
 	for i := 0; i != len(pw); i++ {
 		temp[i] = pw[i]
@@ -62,8 +77,7 @@ func (s *Secret) SetPassword(pw string) error {
 	for i := 0; i != len(pepper); i++ {
 		temp[i+len(pw)+len(s.Salt)] = pepper[i]
 	}
-	s.Password = sha512.Sum512(temp)
-	return nil
+	return sha512.Sum512(temp)
 }
 
 func (s *Secret) genSalt() error {
