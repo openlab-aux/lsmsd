@@ -39,6 +39,7 @@ type Config struct {
 		Enabled     bool
 		Certificate string
 		KeyFile     string
+		Pepperfile  string
 	}
 	Database struct {
 		Server string
@@ -58,6 +59,7 @@ const (
 	DEFAULT_KEYFILE         = "keyfile.key"
 	DEFAULT_DATABASE_SERVER = "localhost"
 	DEFAULT_DATABASE_DB     = "lsmsd"
+	DEFAULT_PEPPERFILE      = "./.pepper"
 )
 
 func main() {
@@ -68,6 +70,7 @@ func main() {
 	var loglevel = flag.String("loglevel", DEFAULT_LOGLEVEL, "verbosity")
 	var enable_crypto = flag.Bool("enablecrypto", DEFAULT_CRYPTO, "Use TLS instead of plain text")
 	var certificate = flag.String("certificate", DEFAULT_CERTIFICATE, "certificate path")
+	var pepper = flag.String("pepper", DEFAULT_PEPPERFILE, "path to your pepperfile")
 	var keyfile = flag.String("keyfile", DEFAULT_KEYFILE, "private key path")
 	var dbserver = flag.String("dbserver", DEFAULT_DATABASE_SERVER, "address of your mongo db server")
 	var dbdb = flag.String("dbdb", DEFAULT_DATABASE_DB, "default database name")
@@ -99,6 +102,9 @@ func main() {
 	if *dbdb != DEFAULT_DATABASE_DB {
 		cfg.Database.DB = *dbdb
 	}
+	if *pepper != DEFAULT_PEPPERFILE {
+		cfg.Crypto.Pepperfile = *pepper
+	}
 
 	switch cfg.Logging.Level {
 	case "Debug":
@@ -115,6 +121,7 @@ func main() {
 	defer s.Close()
 
 	backend.RegisterDatabase(s, cfg.Database.DB)
+	backend.ReadPepper(cfg.Crypto.Pepperfile)
 	defer backend.CloseIDGen()
 	restful.DefaultContainer.Filter(restful.DefaultContainer.OPTIONSFilter)
 	restful.Add(backend.NewItemService())

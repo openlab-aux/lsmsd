@@ -44,9 +44,9 @@ func NewPolicyService() *restful.WebService {
 
 	service.Route(service.GET("/{name}").To(GetPolicyByName))
 	service.Route(service.GET("").To(ListPolicy))
-	service.Route(service.PUT("").To(UpdatePolicy))
-	service.Route(service.POST("").To(CreatePolicy))
-	service.Route(service.DELETE("/{name}").To(DeletePolicy))
+	service.Route(service.PUT("").Filter(basicAuthFilter).To(UpdatePolicy))
+	service.Route(service.POST("").Filter(basicAuthFilter).To(CreatePolicy))
+	service.Route(service.DELETE("/{name}").Filter(basicAuthFilter).To(DeletePolicy))
 	return service
 }
 

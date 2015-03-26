@@ -51,9 +51,9 @@ func NewItemService() *restful.WebService {
 
 	service.Route(service.GET("/{id}").To(GetItemById))
 	service.Route(service.GET("").To(ListItem))
-	service.Route(service.PUT("").To(UpdateItem))
-	service.Route(service.POST("").To(CreateItem))
-	service.Route(service.DELETE("/{id}").To(DeleteItem))
+	service.Route(service.PUT("").Filter(basicAuthFilter).To(UpdateItem))
+	service.Route(service.POST("").Filter(basicAuthFilter).To(CreateItem))
+	service.Route(service.DELETE("/{id}").Filter(basicAuthFilter).To(DeleteItem))
 	return service
 }
 

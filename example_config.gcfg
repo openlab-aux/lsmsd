@@ -6,6 +6,7 @@ ListenTo = ":8080"
 Enabled = false
 Certificate = "./certfile.pem"
 KeyFile = "./keyfile.key"
+Pepper "./.pepper"
 [Database]
 Server = "localhost"
 Prefix = "lsmsd_"
