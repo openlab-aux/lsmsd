@@ -104,9 +104,9 @@ func NewUserService() *restful.WebService {
 
 	service.Route(service.GET("/{name}").To(GetUserByName))
 	service.Route(service.GET("").To(ListUser))
-	service.Route(service.PUT("").To(UpdateUser))
+	service.Route(service.PUT("").Filter(basicAuthFilter).To(UpdateUser))
 	service.Route(service.POST("").To(CreateUser))
-	service.Route(service.DELETE("/{name}").To(DeleteUser))
+	service.Route(service.DELETE("/{name}").Filter(basicAuthFilter).To(DeleteUser))
 	return service
 }
 

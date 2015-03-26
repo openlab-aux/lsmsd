@@ -28,11 +28,26 @@ import (
 )
 
 func basicAuthFilter(request *restful.Request, response *restful.Response, chain *restful.FilterChain) {
-	_, _, ok := request.Request.BasicAuth()
+	u, p, ok := request.Request.BasicAuth()
 	if !ok {
-		response.WriteErrorString(http.StatusUnauthorized, "Parsing Error")
-		log.Warn("Unsuccessful login attempt")
+	}
+	usr, err := getUserByName(u)
+	if err != nil || !ok {
+		log.WithFields(log.Fields{"User": u}).Warn("Failed login attempt")
+		response.AddHeader("WWW-Authenticate", "Basic realm=\""+request.SelectedRoutePath()+"\"")
+		response.WriteErrorString(http.StatusUnauthorized, "Username / Password incorrect")
 		return
+	}
+
+	pwcorrect := usr.Secret.VerifyPassword(p)
+	if pwcorrect {
+		log.Debug("User Authentication successful")
+	} else {
+		log.WithFields(log.Fields{"User": u}).Warn("Failed login attempt")
+		response.AddHeader("WWW-Authenticate", "Basic realm=\""+request.SelectedRoutePath()+"\"")
+		response.WriteErrorString(http.StatusUnauthorized, "Username / Password incorrect")
+		return
+
 	}
 	chain.ProcessFilter(request, response)
 }
