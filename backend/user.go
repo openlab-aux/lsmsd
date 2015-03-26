@@ -26,17 +26,72 @@ import (
 	"net/http"
 	//"strconv"
 	//"strings"
+	"crypto/rand"
 	"crypto/sha512"
 	"gopkg.in/mgo.v2/bson"
 )
 
 type User struct {
-	ID    bson.ObjectId `bson:"_id,omitempty" json:"-"`
-	Name  string
-	EMail string
+	ID       bson.ObjectId `bson:"_id,omitempty" json:"-"`
+	Name     string
+	EMail    string
+	Password string `bson:"-" json:",omitempty"`
 
+	Secret Secret `json:"-"`
+}
+
+type Secret struct {
 	Password [sha512.Size]byte `json:"-"`
 	Salt     [64]byte          `json:"-"`
+}
+
+func (s *Secret) SetPassword(pw string) error {
+	salt := s.checkSalt()
+	if !salt {
+		b, err := s.genSalt()
+		if b != len(s.Salt) || err != nil {
+			// TODO: b
+			return err
+		}
+	}
+
+	temp := make([]byte, len(pw)+len(s.Salt)+len(pepper))
+	for i := 0; i != len(pw); i++ {
+		temp[i] = pw[i]
+	}
+	for i := 0; i != len(s.Salt); i++ {
+		temp[i+len(pw)] = s.Salt[i]
+	}
+	for i := 0; i != len(pepper); i++ {
+		temp[i+len(pw)+len(s.Salt)] = pepper[i]
+	}
+	s.Password = sha512.Sum512(temp)
+	return nil
+}
+
+func (s *Secret) genSalt() (int, error) {
+	temp := make([]byte, len(s.Salt))
+	b, err := rand.Read(temp)
+	if b != len(s.Salt) || err != nil {
+		return 0, err
+	}
+	for i := 0; i != len(s.Salt); i++ {
+		s.Salt[i] = temp[i]
+	}
+	return b, err
+}
+
+func (s *Secret) checkSalt() bool {
+	cnt := 0
+	for i := 0; i != len(s.Salt); i++ {
+		if s.Salt[i] == 0 {
+			cnt++
+		}
+	}
+	if cnt == len(s.Salt) {
+		return false
+	}
+	return true
 }
 
 func NewUserService() *restful.WebService {
@@ -121,6 +176,7 @@ func CreateUser(request *restful.Request, response *restful.Response) {
 	usr := new(User)
 	err := request.ReadEntity(usr)
 	log.WithFields(log.Fields{"Username": usr.Name}).Info("Attempted user registration")
+	log.Debug(usr)
 	if err != nil {
 		response.WriteErrorString(http.StatusBadRequest, ERROR_INVALID_INPUT)
 		log.WithFields(log.Fields{"Error Msg": err}).Info(ERROR_INVALID_INPUT)
@@ -133,8 +189,12 @@ func CreateUser(request *restful.Request, response *restful.Response) {
 		response.WriteErrorString(http.StatusUnauthorized, "This username is not available")
 		return
 	}
+	err = usr.Secret.SetPassword(usr.Password)
+	if err != nil {
+	} else {
 
-	err = createUser(usr)
+		err = createUser(usr)
+	}
 	if err != nil {
 		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
 		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_INTERNAL)
