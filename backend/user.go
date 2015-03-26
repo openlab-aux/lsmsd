@@ -28,6 +28,7 @@ import (
 	//"strings"
 	"crypto/rand"
 	"crypto/sha512"
+	"errors"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -46,13 +47,9 @@ type Secret struct {
 }
 
 func (s *Secret) SetPassword(pw string) error {
-	salt := s.checkSalt()
-	if !salt {
-		b, err := s.genSalt()
-		if b != len(s.Salt) || err != nil {
-			// TODO: b
-			return err
-		}
+	err := s.genSalt()
+	if err != nil {
+		return err
 	}
 
 	temp := make([]byte, len(pw)+len(s.Salt)+len(pepper))
@@ -69,29 +66,19 @@ func (s *Secret) SetPassword(pw string) error {
 	return nil
 }
 
-func (s *Secret) genSalt() (int, error) {
+func (s *Secret) genSalt() error {
 	temp := make([]byte, len(s.Salt))
 	b, err := rand.Read(temp)
-	if b != len(s.Salt) || err != nil {
-		return 0, err
+	if err != nil {
+		return err
+	}
+	if b != len(s.Salt) {
+		return errors.New("Read less than expected bytes")
 	}
 	for i := 0; i != len(s.Salt); i++ {
 		s.Salt[i] = temp[i]
 	}
-	return b, err
-}
-
-func (s *Secret) checkSalt() bool {
-	cnt := 0
-	for i := 0; i != len(s.Salt); i++ {
-		if s.Salt[i] == 0 {
-			cnt++
-		}
-	}
-	if cnt == len(s.Salt) {
-		return false
-	}
-	return true
+	return nil
 }
 
 func NewUserService() *restful.WebService {
