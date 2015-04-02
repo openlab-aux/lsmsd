@@ -24,6 +24,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
 	//"html/template"
+	//	"github.com/fatih/structs"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
 	"strconv"
@@ -33,13 +34,18 @@ import (
 type Item struct {
 	ID          bson.ObjectId `bson:"_id,omitempty" json:"-"`
 	EID         uint64
-	Name        string
-	Description string
-	Contains    []bson.ObjectId
-	Owner       uint64
-	Maintainer  uint64
-	Usage       uint64
-	Discard     uint64
+	Name        string          `bson:",omitempty"`
+	Description string          `bson:",omitempty"`
+	Contains    []bson.ObjectId `bson:",omitempty"`
+	Owner       string          `bson:",omitempty"`
+	Maintainer  string          `bson:",omitempty"`
+	Usage       string          `bson:",omitempty"`
+	Discard     string          `bson:",omitempty"`
+}
+
+type ItemHistory struct {
+	ID   bson.ObjectId `bson:"_id,omitempty" json:"-"`
+	Item Item
 }
 
 func NewItemService() *restful.WebService {
@@ -50,6 +56,7 @@ func NewItemService() *restful.WebService {
 		Produces(restful.MIME_JSON, restful.MIME_XML)
 
 	service.Route(service.GET("/{id}").To(GetItemById))
+	service.Route(service.GET("/{id}/log").To(GetItemLog))
 	service.Route(service.GET("").To(ListItem))
 	service.Route(service.PUT("").Filter(basicAuthFilter).To(UpdateItem))
 	service.Route(service.POST("").Filter(basicAuthFilter).To(CreateItem))
@@ -80,6 +87,29 @@ func GetItemById(request *restful.Request, response *restful.Response) {
 func getItemById(id uint64) (Item, error) {
 	res := Item{}
 	err := iCol.Find(bson.M{"eid": id}).One(&res)
+	return res, err
+}
+
+func GetItemLog(request *restful.Request, response *restful.Response) {
+	sid := request.PathParameter("id")
+	id, err := strconv.ParseUint(sid, 10, 64)
+	if err != nil {
+		response.WriteErrorString(http.StatusNotFound, ERROR_INVALID_ID)
+		log.Info(err)
+		return
+	}
+	history, err := getItemLog(id)
+	if err != nil {
+		response.WriteErrorString(http.StatusNotFound, ERROR_INVALID_ID)
+		log.Info(err)
+		return
+	}
+	response.WriteEntity(history)
+}
+
+func getItemLog(id uint64) ([]ItemHistory, error) {
+	res := make([]ItemHistory, 0)
+	err := ihCol.Find(bson.M{"item": bson.M{"eid": id}}).All(&res)
 	return res, err
 }
 
