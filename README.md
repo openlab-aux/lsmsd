@@ -8,6 +8,13 @@ lsmsd requires Go 1.4 or greater. Thanks to the Go toolset the installation is v
     go get github.com/openlab-aux/lsmsd
 
 ___
+# Roadmap for 0.1
+  * Notifications via E-Mail / XMPP
+  * Logging and error message overhaul
+  * Better test coverage & code documentation
+  * Websockets
+
+___
 # Documentation
 
 Code Documentation for this tool can be found at [godoc](http://godoc.org/github.com/openlab-aux/lsmsd).
