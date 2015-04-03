@@ -39,14 +39,14 @@ func Test_uint64Contains(t *testing.T) {
 func Test_uint64Diff(t *testing.T) {
 	A, B := []uint64{1, 2}, []uint64{1, 3}
 	C := uint64Diff(A, B)
-	_, ok := C[1]
+	_, ok := C["1"]
 	if ok {
 		t.Error("failed")
 	}
-	if C[2] != dmp.DiffDelete {
+	if C["2"] != dmp.DiffDelete {
 		t.Error("failed")
 	}
-	if C[3] != dmp.DiffInsert {
+	if C["3"] != dmp.DiffInsert {
 		t.Error("failed")
 	}
 }
