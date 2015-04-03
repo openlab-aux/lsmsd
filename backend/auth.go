@@ -49,5 +49,6 @@ func basicAuthFilter(request *restful.Request, response *restful.Response, chain
 		return
 
 	}
+	request.SetAttribute("User", usr.Name)
 	chain.ProcessFilter(request, response)
 }

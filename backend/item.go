@@ -45,10 +45,11 @@ type Item struct {
 	Discard     string   `bson:",omitempty"`
 }
 
-func (i *Item) NewItemHistory(it *Item) *ItemHistory {
+func (i *Item) NewItemHistory(it *Item, user string) *ItemHistory {
 	res := new(ItemHistory)
 	res.Item = make(map[string]interface{})
 	res.Item["eid"] = i.EID
+	res.User = user
 
 	if it == nil {
 		res.Item["deleted"] = true
@@ -110,6 +111,7 @@ func uint64Contains(sl []uint64, u uint64) bool {
 type ItemHistory struct {
 	ID        bson.ObjectId `bson:"_id,omitempty" json:"-"`
 	Timestamp time.Time     `bson:"-" json:",omitempty"`
+	User      string
 	Item      map[string]interface{}
 }
 
@@ -236,7 +238,7 @@ func UpdateItem(request *restful.Request, response *restful.Response) {
 		log.Warn(err)
 		return
 	}
-	h := i.NewItemHistory(itm)
+	h := i.NewItemHistory(itm, request.Attribute("User").(string))
 
 	err = updateItem(itm, h)
 	if err != nil {
@@ -292,7 +294,7 @@ func DeleteItem(request *restful.Request, response *restful.Response) {
 		return
 	}
 
-	h := i.NewItemHistory(nil)
+	h := i.NewItemHistory(nil, request.Attribute("User").(string))
 	err = deleteItem(&i, h)
 	if err != nil {
 		log.Warn(err)
