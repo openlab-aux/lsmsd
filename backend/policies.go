@@ -66,8 +66,8 @@ func NewPolicyService() *restful.WebService {
 	service := new(restful.WebService)
 	service.
 		Path("/policy").
-		Consumes(restful.MIME_JSON, restful.MIME_XML).
-		Produces(restful.MIME_JSON, restful.MIME_XML)
+		Consumes(restful.MIME_JSON).
+		Produces(restful.MIME_JSON)
 
 	service.Route(service.GET("/{name}").To(GetPolicyByName))
 	service.Route(service.GET("/{name}/log").To(GetPolicyLog))

@@ -99,8 +99,8 @@ func NewUserService() *restful.WebService {
 	service := new(restful.WebService)
 	service.
 		Path("/user").
-		Consumes(restful.MIME_JSON, restful.MIME_XML).
-		Produces(restful.MIME_JSON, restful.MIME_XML)
+		Consumes(restful.MIME_JSON).
+		Produces(restful.MIME_JSON)
 
 	service.Route(service.GET("/{name}").To(GetUserByName))
 	service.Route(service.GET("/{name}/log").To(GetUserLogByName))

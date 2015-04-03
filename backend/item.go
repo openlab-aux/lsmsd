@@ -119,8 +119,8 @@ func NewItemService() *restful.WebService {
 	service := new(restful.WebService)
 	service.
 		Path("/item").
-		Consumes(restful.MIME_JSON, restful.MIME_XML).
-		Produces(restful.MIME_JSON, restful.MIME_XML)
+		Consumes(restful.MIME_JSON).
+		Produces(restful.MIME_JSON)
 
 	service.Route(service.GET("/{id}").To(GetItemById))
 	service.Route(service.GET("/{id}/log").To(GetItemLog))
