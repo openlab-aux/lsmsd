@@ -1,4 +1,4 @@
-lsmsd - lightweight storage management system daemon
+lsmsd - lightweight storage management system daemon [![Build Status](https://travis-ci.org/openlab-aux/lsmsd.svg?branch=master)](https://travis-ci.org/openlab-aux/lsmsd)
 ===========
 lsmsd is a storage management system designed for our local hackerspace.
 ___
