@@ -35,14 +35,14 @@ import (
 
 type Item struct {
 	ID          bson.ObjectId `bson:"_id,omitempty" json:"-"`
-	EID         uint64
-	Name        string   `bson:",omitempty"`
-	Description string   `bson:",omitempty"`
-	Contains    []uint64 `bson:",omitempty"`
-	Owner       string   `bson:",omitempty"`
-	Maintainer  string   `bson:",omitempty"`
-	Usage       string   `bson:",omitempty"`
-	Discard     string   `bson:",omitempty"`
+	EID         uint64        `json:"Id"`
+	Name        string        `bson:",omitempty"`
+	Description string        `bson:",omitempty"`
+	Contains    []uint64      `bson:",omitempty"`
+	Owner       string        `bson:",omitempty"`
+	Maintainer  string        `bson:",omitempty"`
+	Usage       string        `bson:",omitempty"`
+	Discard     string        `bson:",omitempty"`
 }
 
 func (i *Item) NewItemHistory(it *Item, user string) *ItemHistory {
@@ -119,15 +119,50 @@ func NewItemService() *restful.WebService {
 	service := new(restful.WebService)
 	service.
 		Path("/item").
+		Doc("Item related services").
+		ApiVersion("0.1").
 		Consumes(restful.MIME_JSON).
 		Produces(restful.MIME_JSON)
 
-	service.Route(service.GET("/{id}").To(GetItemById))
-	service.Route(service.GET("/{id}/log").To(GetItemLog))
-	service.Route(service.GET("").To(ListItem))
-	service.Route(service.PUT("").Filter(basicAuthFilter).To(UpdateItem))
-	service.Route(service.POST("").Filter(basicAuthFilter).To(CreateItem))
-	service.Route(service.DELETE("/{id}").Filter(basicAuthFilter).To(DeleteItem))
+	service.Route(service.GET("/{id}").
+		Param(restful.PathParameter("id", "Item ID")).
+		Doc("Returns a single item identified by its ID").
+		//Returns(http.StatusOK, "Item request successful", Item{}).
+		To(GetItemById).
+		Writes(Item{}).
+		Do(ReturnsInternalServerError, ReturnsNotFound))
+	service.Route(service.GET("/{id}/log").
+		Param(restful.PathParameter("id", "Item ID")).
+		Doc("Returns the items changelog").
+		To(GetItemLog).
+		Writes(ItemHistory{}).
+		Do(ReturnsInternalServerError, ReturnsNotFound))
+	service.Route(service.GET("").
+		Doc("List all available items (this may be replaced by a paginated version)").
+		To(ListItem).
+		Writes([]Item{}).
+		Do(ReturnsInternalServerError))
+	service.Route(service.PUT("").
+		Filter(basicAuthFilter).
+		Doc("Update a item.").
+		To(UpdateItem).
+		Reads(Item{}).
+		Returns(http.StatusOK, "Update successful", nil).
+		Do(ReturnsInternalServerError, ReturnsNotFound))
+	service.Route(service.POST("").
+		Filter(basicAuthFilter).
+		Doc("Insert a item into the databse").
+		To(CreateItem).
+		Reads(Item{}).
+		Returns(http.StatusOK, "Insert successful", "/item/{id}").
+		Do(ReturnsInternalServerError))
+	service.Route(service.DELETE("/{id}").
+		Filter(basicAuthFilter).
+		Param(restful.PathParameter("id", "Item ID")).
+		Doc("Delete a item").
+		To(DeleteItem).
+		Returns(http.StatusOK, "Delete successful", nil).
+		Do(ReturnsInternalServerError, ReturnsNotFound))
 	return service
 }
 
@@ -277,6 +312,7 @@ func DeleteItem(request *restful.Request, response *restful.Response) {
 	sid := request.PathParameter("id")
 	id, err := strconv.ParseUint(sid, 10, 64)
 	if err != nil {
+		//TODO
 		log.WithFields(log.Fields{"Error Msg": err}).Info(ERROR_INVALID_ID)
 		response.WriteErrorString(http.StatusNotFound, ERROR_INVALID_ID)
 		return

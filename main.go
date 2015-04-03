@@ -28,6 +28,7 @@ import (
 	"net/http"
 	//	"time"
 	"code.google.com/p/gcfg"
+	"github.com/emicklei/go-restful/swagger"
 	"gopkg.in/mgo.v2"
 )
 
@@ -127,6 +128,16 @@ func main() {
 	restful.Add(backend.NewItemService())
 	restful.Add(backend.NewUserService())
 	restful.Add(backend.NewPolicyService())
+
+	config := swagger.Config{
+		WebServices:     restful.DefaultContainer.RegisteredWebServices(),
+		WebServicesUrl:  cfg.Network.ListenTo,
+		ApiPath:         "/apidocs.json",
+		SwaggerPath:     "/apidocs/",
+		SwaggerFilePath: "./swagger/dist/",
+	}
+
+	swagger.RegisterSwaggerService(config, restful.DefaultContainer)
 
 	log.WithFields(log.Fields{"Address": cfg.Network.ListenTo, "TLS": cfg.Crypto.Enabled}).
 		Info("lsms started successfully")

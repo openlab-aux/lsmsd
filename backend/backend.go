@@ -22,7 +22,9 @@ package backend
 import (
 	"crypto/rand"
 	log "github.com/Sirupsen/logrus"
+	"github.com/emicklei/go-restful"
 	"gopkg.in/mgo.v2"
+	"net/http"
 	"os"
 )
 
@@ -109,4 +111,12 @@ func createPepper(path string) []byte {
 
 func CloseIDGen() {
 	idgen.StopIDGenerator()
+}
+
+func ReturnsInternalServerError(b *restful.RouteBuilder) {
+	b.Returns(http.StatusInternalServerError, ERROR_INTERNAL, nil)
+}
+
+func ReturnsNotFound(b *restful.RouteBuilder) {
+	b.Returns(http.StatusNotFound, ERROR_INVALID_ID, nil)
 }
