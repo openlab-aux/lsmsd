@@ -45,11 +45,16 @@ type Item struct {
 	Discard     string   `bson:",omitempty"`
 }
 
-func (i *Item) NewItemHistory(it Item) *ItemHistory {
+func (i *Item) NewItemHistory(it *Item) *ItemHistory {
 	res := new(ItemHistory)
-
-	res.Item["_id"] = i.ID
+	res.Item = make(map[string]interface{})
 	res.Item["eid"] = i.EID
+
+	if it == nil {
+		res.Item["deleted"] = true
+		return res
+	}
+	//res.Item["_id"] = i.ID
 	if i.Name != it.Name {
 		res.Item["name"] = it.Name
 	}
@@ -77,16 +82,17 @@ func (i *Item) NewItemHistory(it Item) *ItemHistory {
 	return res
 }
 
-func uint64Diff(u1, u2 []uint64) map[uint64]dmp.Operation {
-	res := make(map[uint64]dmp.Operation)
+func uint64Diff(u1, u2 []uint64) map[string]dmp.Operation {
+	// mgo.bson does only support strings as keys
+	res := make(map[string]dmp.Operation)
 	for i := 0; i != len(u1); i++ {
 		if !uint64Contains(u2, u1[i]) {
-			res[u1[i]] = dmp.DiffDelete
+			res[strconv.FormatUint(u1[i], 10)] = dmp.DiffDelete
 		}
 	}
 	for i := 0; i != len(u2); i++ {
 		if !uint64Contains(u1, u2[i]) {
-			res[u2[i]] = dmp.DiffInsert
+			res[strconv.FormatUint(u2[i], 10)] = dmp.DiffInsert
 		}
 	}
 	return res
@@ -102,8 +108,9 @@ func uint64Contains(sl []uint64, u uint64) bool {
 }
 
 type ItemHistory struct {
-	ID   bson.ObjectId `bson:"_id,omitempty" json:"-"`
-	Item map[string]interface{}
+	ID        bson.ObjectId `bson:"_id,omitempty" json:"-"`
+	Timestamp time.Time     `bson:"-" json:",omitempty"`
+	Item      map[string]interface{}
 }
 
 func NewItemService() *restful.WebService {
@@ -167,7 +174,10 @@ func GetItemLog(request *restful.Request, response *restful.Response) {
 
 func getItemLog(id uint64) ([]ItemHistory, error) {
 	res := make([]ItemHistory, 0)
-	err := ihCol.Find(bson.M{"item": bson.M{"eid": id}}).All(&res)
+	err := ihCol.Find(bson.M{"item.eid": id}).All(&res)
+	for i := 0; i != len(res); i++ {
+		res[i].Timestamp = res[i].ID.Time()
+	}
 	return res, err
 }
 
@@ -220,23 +230,29 @@ func UpdateItem(request *restful.Request, response *restful.Response) {
 		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_INTERNAL)
 		return
 	}
-	ex := checkItemExistance(itm)
-	if ex {
-		err = updateItem(itm)
-		if err != nil {
-			response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
-			log.WithFields(log.Fields{"Err": err}).Warn("Error while updating Item")
-			return
-		}
-		response.WriteEntity(true)
-		return
-	} else {
-		response.WriteErrorString(http.StatusNotFound, "Item not found")
+	i, err := getItemById(itm.EID)
+	if err != nil {
+		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
+		log.Warn(err)
 		return
 	}
+	h := i.NewItemHistory(itm)
+
+	err = updateItem(itm, h)
+	if err != nil {
+		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
+		log.Warn(err)
+		return
+	}
+	response.WriteEntity(true)
+	return
 }
 
-func updateItem(itm *Item) error {
+func updateItem(itm *Item, ih *ItemHistory) error {
+	err := ihCol.Insert(ih)
+	if err != nil {
+		return err
+	}
 	return iCol.Update(bson.M{"eid": itm.EID}, itm)
 }
 
@@ -264,7 +280,7 @@ func DeleteItem(request *restful.Request, response *restful.Response) {
 		return
 	}
 
-	err = deleteItem(id)
+	i, err := getItemById(id)
 	if err != nil {
 		if err.Error() == "not found" {
 			log.WithFields(log.Fields{"ID": id}).Info(ERROR_INVALID_ID)
@@ -275,9 +291,21 @@ func DeleteItem(request *restful.Request, response *restful.Response) {
 		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
 		return
 	}
+
+	h := i.NewItemHistory(nil)
+	err = deleteItem(&i, h)
+	if err != nil {
+		log.Warn(err)
+		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
+		return
+	}
 	response.WriteEntity(true)
 }
 
-func deleteItem(id uint64) error {
-	return iCol.Remove(bson.M{"eid": id})
+func deleteItem(itm *Item, ih *ItemHistory) error {
+	err := ihCol.Insert(ih)
+	if err != nil {
+		return err
+	}
+	return iCol.Remove(bson.M{"eid": itm.EID})
 }
