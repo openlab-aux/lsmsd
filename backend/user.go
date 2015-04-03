@@ -103,6 +103,7 @@ func NewUserService() *restful.WebService {
 		Produces(restful.MIME_JSON, restful.MIME_XML)
 
 	service.Route(service.GET("/{name}").To(GetUserByName))
+	service.Route(service.GET("/{name}/log").To(GetUserLogByName))
 	service.Route(service.GET("").To(ListUser))
 	service.Route(service.PUT("").Filter(basicAuthFilter).To(UpdateUser))
 	service.Route(service.POST("").To(CreateUser))
@@ -126,6 +127,34 @@ func getUserByName(name string) (User, error) {
 	res := User{}
 	err := uCol.Find(bson.M{"name": name}).One(&res)
 	return res, err
+}
+
+func GetUserLogByName(request *restful.Request, response *restful.Response) {
+	name := request.PathParameter("name")
+	ih, ph, err := getUserLogByName(name)
+	if err != nil {
+		response.WriteErrorString(http.StatusNotFound, ERROR_INVALID_ID)
+		log.Info(err)
+		return
+	}
+	//TODO: Unify the results before writing them
+	response.WriteEntity(ih)
+	response.WriteEntity(ph)
+	return
+}
+
+func getUserLogByName(name string) ([]ItemHistory, []PolicyHistory, error) {
+	ih := make([]ItemHistory, 0)
+	err := ihCol.Find(bson.M{"user": name}).All(&ih)
+	if err != nil {
+		return nil, nil, err
+	}
+	ph := make([]PolicyHistory, 0)
+	err = phCol.Find(bson.M{"user": name}).All(&ph)
+	if err != nil {
+		return nil, nil, err
+	}
+	return ih, ph, nil
 }
 
 func ListUser(request *restful.Request, response *restful.Response) {
