@@ -120,3 +120,11 @@ func ReturnsInternalServerError(b *restful.RouteBuilder) {
 func ReturnsNotFound(b *restful.RouteBuilder) {
 	b.Returns(http.StatusNotFound, ERROR_INVALID_ID, nil)
 }
+
+func ReturnsUpdateSuccessful(b *restful.RouteBuilder) {
+	b.Returns(http.StatusOK, "Update successful", nil)
+}
+
+func ReturnsDeleteSuccessful(b *restful.RouteBuilder) {
+	b.Returns(http.StatusOK, "Delete successful", nil)
+}

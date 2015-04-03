@@ -66,15 +66,52 @@ func NewPolicyService() *restful.WebService {
 	service := new(restful.WebService)
 	service.
 		Path("/policy").
+		Doc("Policy related services").
+		ApiVersion("0.1").
 		Consumes(restful.MIME_JSON).
 		Produces(restful.MIME_JSON)
 
-	service.Route(service.GET("/{name}").To(GetPolicyByName))
-	service.Route(service.GET("/{name}/log").To(GetPolicyLog))
-	service.Route(service.GET("").To(ListPolicy))
-	service.Route(service.PUT("").Filter(basicAuthFilter).To(UpdatePolicy))
-	service.Route(service.POST("").Filter(basicAuthFilter).To(CreatePolicy))
-	service.Route(service.DELETE("/{name}").Filter(basicAuthFilter).To(DeletePolicy))
+	service.Route(service.GET("/{name}").
+		Param(restful.PathParameter("name", "Policy Name")).
+		Doc("Returns a single policy identified by its name").
+		To(GetPolicyByName).
+		Writes(Policy{}).
+		Do(ReturnsInternalServerError, ReturnsNotFound))
+
+	service.Route(service.GET("/{name}/log").
+		Param(restful.PathParameter("name", "Policy Name")).
+		Doc("Returns the policys changelog").
+		To(GetPolicyLog).
+		Writes(PolicyHistory{}).
+		Do(ReturnsInternalServerError, ReturnsNotFound))
+
+	service.Route(service.GET("").
+		Doc("List all available policys (this may be replaced by a paginated version)").
+		To(ListPolicy).
+		Writes([]Policy{}).
+		Do(ReturnsInternalServerError))
+
+	service.Route(service.PUT("").
+		Filter(basicAuthFilter).
+		Doc("Update a policy").
+		To(UpdatePolicy).
+		Reads(Policy{}).
+		Do(ReturnsInternalServerError, ReturnsNotFound, ReturnsUpdateSuccessful))
+
+	service.Route(service.POST("").
+		Filter(basicAuthFilter).
+		Doc("Insert a policy").
+		To(CreatePolicy).
+		Reads(Policy{}).
+		Returns(http.StatusOK, "Insert successful", "/policy/{name").
+		Do(ReturnsInternalServerError))
+
+	service.Route(service.DELETE("/{name}").
+		Filter(basicAuthFilter).
+		Param(restful.PathParameter("name", "Policy Name")).
+		Doc("Delete a policy").
+		To(DeletePolicy).
+		Do(ReturnsInternalServerError, ReturnsNotFound, ReturnsDeleteSuccessful))
 	return service
 }
 
