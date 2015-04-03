@@ -25,27 +25,85 @@ import (
 	"github.com/emicklei/go-restful"
 	//"html/template"
 	//	"github.com/fatih/structs"
+	dmp "github.com/sergi/go-diff/diffmatchpatch"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
 	"strconv"
 	//"strings"
+	"time"
 )
 
 type Item struct {
 	ID          bson.ObjectId `bson:"_id,omitempty" json:"-"`
 	EID         uint64
-	Name        string          `bson:",omitempty"`
-	Description string          `bson:",omitempty"`
-	Contains    []bson.ObjectId `bson:",omitempty"`
-	Owner       string          `bson:",omitempty"`
-	Maintainer  string          `bson:",omitempty"`
-	Usage       string          `bson:",omitempty"`
-	Discard     string          `bson:",omitempty"`
+	Name        string   `bson:",omitempty"`
+	Description string   `bson:",omitempty"`
+	Contains    []uint64 `bson:",omitempty"`
+	Owner       string   `bson:",omitempty"`
+	Maintainer  string   `bson:",omitempty"`
+	Usage       string   `bson:",omitempty"`
+	Discard     string   `bson:",omitempty"`
+}
+
+func (i *Item) NewItemHistory(it Item) *ItemHistory {
+	res := new(ItemHistory)
+
+	res.Item["_id"] = i.ID
+	res.Item["eid"] = i.EID
+	if i.Name != it.Name {
+		res.Item["name"] = it.Name
+	}
+	if i.Description != it.Description {
+		d := dmp.New()
+		d.DiffTimeout = 200 * time.Millisecond
+		res.Item["description"] = d.DiffMain(i.Description, it.Description, true)
+	}
+	condiff := uint64Diff(i.Contains, it.Contains)
+	if len(condiff) > 0 {
+		res.Item["contains"] = condiff
+	}
+	if i.Owner != it.Owner {
+		res.Item["owner"] = it.Owner
+	}
+	if i.Maintainer != it.Maintainer {
+		res.Item["maintainer"] = it.Maintainer
+	}
+	if i.Usage != it.Usage {
+		res.Item["usage"] = it.Usage
+	}
+	if i.Discard != it.Discard {
+		res.Item["discard"] = it.Discard
+	}
+	return res
+}
+
+func uint64Diff(u1, u2 []uint64) map[uint64]dmp.Operation {
+	res := make(map[uint64]dmp.Operation)
+	for i := 0; i != len(u1); i++ {
+		if !uint64Contains(u2, u1[i]) {
+			res[u1[i]] = dmp.DiffDelete
+		}
+	}
+	for i := 0; i != len(u2); i++ {
+		if !uint64Contains(u1, u2[i]) {
+			res[u2[i]] = dmp.DiffInsert
+		}
+	}
+	return res
+}
+
+func uint64Contains(sl []uint64, u uint64) bool {
+	for i := 0; i != len(sl); i++ {
+		if sl[i] == u {
+			return true
+		}
+	}
+	return false
 }
 
 type ItemHistory struct {
 	ID   bson.ObjectId `bson:"_id,omitempty" json:"-"`
-	Item Item
+	Item map[string]interface{}
 }
 
 func NewItemService() *restful.WebService {

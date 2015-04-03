@@ -40,6 +40,7 @@ var db *mgo.Session
 
 var uCol *mgo.Collection
 var iCol *mgo.Collection
+var ihCol *mgo.Collection
 var pCol *mgo.Collection
 
 var pepper []byte
@@ -50,6 +51,7 @@ func RegisterDatabase(s *mgo.Session, dbname string) {
 	db = s
 	uCol = s.DB(dbname).C("user")
 	iCol = s.DB(dbname).C("item")
+	ihCol = s.DB(dbname).C("item_history")
 	pCol = s.DB(dbname).C("policy")
 	idgen = NewIDGenerator(s.DB(dbname).C("counters"))
 }
