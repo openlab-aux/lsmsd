@@ -31,7 +31,7 @@ import (
 const (
 	ERROR_INVALID_ID    = "Error: Invalid ID"
 	ERROR_STMT_PREPARE  = "Error: Statement prepare failed"
-	ERROR_INVALID_INPUT = "ERROR: Invalid Input"
+	ERROR_INVALID_INPUT = "Error: Invalid Input"
 	ERROR_INTERNAL      = "Error: Internal Server Error"
 	ERROR_INSERT        = "Error: DB Insert failed"
 	ERROR_QUERY         = "Error: DB Query failed"
@@ -113,18 +113,22 @@ func CloseIDGen() {
 	idgen.StopIDGenerator()
 }
 
-func ReturnsInternalServerError(b *restful.RouteBuilder) {
+func returnsInternalServerError(b *restful.RouteBuilder) {
 	b.Returns(http.StatusInternalServerError, ERROR_INTERNAL, nil)
 }
 
-func ReturnsNotFound(b *restful.RouteBuilder) {
+func returnsNotFound(b *restful.RouteBuilder) {
 	b.Returns(http.StatusNotFound, ERROR_INVALID_ID, nil)
 }
 
-func ReturnsUpdateSuccessful(b *restful.RouteBuilder) {
+func returnsUpdateSuccessful(b *restful.RouteBuilder) {
 	b.Returns(http.StatusOK, "Update successful", nil)
 }
 
-func ReturnsDeleteSuccessful(b *restful.RouteBuilder) {
+func returnsDeleteSuccessful(b *restful.RouteBuilder) {
 	b.Returns(http.StatusOK, "Delete successful", nil)
+}
+
+func returnsBadRequest(b *restful.RouteBuilder) {
+	b.Returns(http.StatusBadRequest, "Failed to parse input", nil)
 }

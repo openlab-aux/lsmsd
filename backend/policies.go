@@ -76,27 +76,27 @@ func NewPolicyService() *restful.WebService {
 		Doc("Returns a single policy identified by its name").
 		To(GetPolicyByName).
 		Writes(Policy{}).
-		Do(ReturnsInternalServerError, ReturnsNotFound))
+		Do(returnsInternalServerError, returnsNotFound, returnsBadRequest))
 
 	service.Route(service.GET("/{name}/log").
 		Param(restful.PathParameter("name", "Policy Name")).
 		Doc("Returns the policys changelog").
 		To(GetPolicyLog).
 		Writes(PolicyHistory{}).
-		Do(ReturnsInternalServerError, ReturnsNotFound))
+		Do(returnsInternalServerError, returnsNotFound, returnsBadRequest))
 
 	service.Route(service.GET("").
 		Doc("List all available policys (this may be replaced by a paginated version)").
 		To(ListPolicy).
 		Writes([]Policy{}).
-		Do(ReturnsInternalServerError))
+		Do(returnsInternalServerError))
 
 	service.Route(service.PUT("").
 		Filter(basicAuthFilter).
 		Doc("Update a policy").
 		To(UpdatePolicy).
 		Reads(Policy{}).
-		Do(ReturnsInternalServerError, ReturnsNotFound, ReturnsUpdateSuccessful))
+		Do(returnsInternalServerError, returnsNotFound, returnsUpdateSuccessful, returnsBadRequest))
 
 	service.Route(service.POST("").
 		Filter(basicAuthFilter).
@@ -104,14 +104,14 @@ func NewPolicyService() *restful.WebService {
 		To(CreatePolicy).
 		Reads(Policy{}).
 		Returns(http.StatusOK, "Insert successful", "/policy/{name").
-		Do(ReturnsInternalServerError))
+		Do(returnsInternalServerError, returnsBadRequest))
 
 	service.Route(service.DELETE("/{name}").
 		Filter(basicAuthFilter).
 		Param(restful.PathParameter("name", "Policy Name")).
 		Doc("Delete a policy").
 		To(DeletePolicy).
-		Do(ReturnsInternalServerError, ReturnsNotFound, ReturnsDeleteSuccessful))
+		Do(returnsInternalServerError, returnsNotFound, returnsDeleteSuccessful, returnsBadRequest))
 	return service
 }
 

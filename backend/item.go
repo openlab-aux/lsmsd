@@ -130,27 +130,27 @@ func NewItemService() *restful.WebService {
 		//Returns(http.StatusOK, "Item request successful", Item{}).
 		To(GetItemById).
 		Writes(Item{}).
-		Do(ReturnsInternalServerError, ReturnsNotFound))
+		Do(returnsInternalServerError, returnsNotFound, returnsBadRequest))
 
 	service.Route(service.GET("/{id}/log").
 		Param(restful.PathParameter("id", "Item ID")).
 		Doc("Returns the items changelog").
 		To(GetItemLog).
 		Writes(ItemHistory{}).
-		Do(ReturnsInternalServerError, ReturnsNotFound))
+		Do(returnsInternalServerError, returnsNotFound, returnsBadRequest))
 
 	service.Route(service.GET("").
 		Doc("List all available items (this may be replaced by a paginated version)").
 		To(ListItem).
 		Writes([]Item{}).
-		Do(ReturnsInternalServerError))
+		Do(returnsInternalServerError))
 
 	service.Route(service.PUT("").
 		Filter(basicAuthFilter).
 		Doc("Update a item.").
 		To(UpdateItem).
 		Reads(Item{}).
-		Do(ReturnsInternalServerError, ReturnsNotFound, ReturnsUpdateSuccessful))
+		Do(returnsInternalServerError, returnsNotFound, returnsUpdateSuccessful, returnsBadRequest))
 
 	service.Route(service.POST("").
 		Filter(basicAuthFilter).
@@ -158,14 +158,14 @@ func NewItemService() *restful.WebService {
 		To(CreateItem).
 		Reads(Item{}).
 		Returns(http.StatusOK, "Insert successful", "/item/{id}").
-		Do(ReturnsInternalServerError))
+		Do(returnsInternalServerError, returnsBadRequest))
 
 	service.Route(service.DELETE("/{id}").
 		Filter(basicAuthFilter).
 		Param(restful.PathParameter("id", "Item ID")).
 		Doc("Delete a item").
 		To(DeleteItem).
-		Do(ReturnsInternalServerError, ReturnsNotFound, ReturnsDeleteSuccessful))
+		Do(returnsInternalServerError, returnsNotFound, returnsDeleteSuccessful, returnsBadRequest))
 	return service
 }
 
