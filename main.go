@@ -130,8 +130,8 @@ func main() {
 	restful.Add(backend.NewPolicyService())
 
 	config := swagger.Config{
-		WebServices:     restful.DefaultContainer.RegisteredWebServices(),
-		WebServicesUrl:  cfg.Network.ListenTo,
+		WebServices: restful.DefaultContainer.RegisteredWebServices(),
+		//WebServicesUrl:  "", //cfg.Network.ListenTo,
 		ApiPath:         "/apidocs.json",
 		SwaggerPath:     "/apidocs/",
 		SwaggerFilePath: "./swagger/dist/",
