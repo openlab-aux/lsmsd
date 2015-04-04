@@ -154,7 +154,7 @@ func NewItemService() *restful.WebService {
 
 	service.Route(service.POST("").
 		Filter(basicAuthFilter).
-		Doc("Insert a item into the databse").
+		Doc("Insert a item into the database").
 		To(CreateItem).
 		Reads(Item{}).
 		Returns(http.StatusOK, "Insert successful", "/item/{id}").
