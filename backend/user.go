@@ -34,9 +34,9 @@ import (
 
 type User struct {
 	ID       bson.ObjectId `bson:"_id,omitempty" json:"-"`
-	Name     string
+	Name     string        `description:"The unique identifier of a user. Let your user know that they should choose it wisely"`
 	EMail    string
-	Password string `bson:"-" json:",omitempty"`
+	Password string `bson:"-" json:",omitempty" description:"Use this field to set a new password. This field will never occour in responses."`
 
 	Secret Secret `json:"-"`
 }
@@ -99,15 +99,52 @@ func NewUserService() *restful.WebService {
 	service := new(restful.WebService)
 	service.
 		Path("/user").
+		Doc("User related services").
+		ApiVersion("0.1").
 		Consumes(restful.MIME_JSON).
 		Produces(restful.MIME_JSON)
 
-	service.Route(service.GET("/{name}").To(GetUserByName))
-	service.Route(service.GET("/{name}/log").To(GetUserLogByName))
-	service.Route(service.GET("").To(ListUser))
-	service.Route(service.PUT("").Filter(basicAuthFilter).To(UpdateUser))
-	service.Route(service.POST("").To(CreateUser))
-	service.Route(service.DELETE("/{name}").Filter(basicAuthFilter).To(DeleteUser))
+	service.Route(service.GET("/{name}").
+		Param(restful.PathParameter("name", "User identifier")).
+		Doc("Returns public accessable information about the referenced user").
+		To(GetUserByName).
+		Writes(User{}).
+		Do(returnsInternalServerError, returnsNotFound, returnsBadRequest))
+
+	service.Route(service.GET("/{name}/log").
+		Param(restful.PathParameter("name", "User identifier")).
+		Doc("Returns all changes the user has made in the DB").
+		To(GetUserLogByName).
+		//TODO: Writes().
+		Do(returnsInternalServerError, returnsNotFound, returnsBadRequest))
+
+	service.Route(service.GET("").
+		Doc("List all users (this may be replaced by a paginated version)").
+		To(ListUser).
+		Writes([]User{}).
+		Do(returnsInternalServerError))
+
+	service.Route(service.PUT("").
+		Filter(basicAuthFilter).
+		Doc("Update user information").
+		To(UpdateUser).
+		Reads(User{}).
+		Do(returnsInternalServerError, returnsNotFound, returnsUpdateSuccessful, returnsBadRequest))
+
+	service.Route(service.POST("").
+		Doc("Register a new user").
+		To(CreateUser).
+		Reads(User{}).
+		Returns(http.StatusOK, "Insert successful", "/user/{name}").
+		Returns(http.StatusUnauthorized, "This username is not available", nil).
+		Do(returnsInternalServerError, returnsBadRequest))
+
+	service.Route(service.DELETE("/{name}").
+		Filter(basicAuthFilter).
+		Param(restful.PathParameter("name", "User identifier")).
+		Doc("Delete a user").
+		To(DeleteUser).
+		Do(returnsInternalServerError, returnsNotFound, returnsDeleteSuccessful, returnsBadRequest))
 	return service
 }
 
