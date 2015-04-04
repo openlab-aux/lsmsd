@@ -46,6 +46,11 @@ type Secret struct {
 	Salt     [64]byte          `json:"-"`
 }
 
+type UserActionHistory struct {
+	ItemChanges   []ItemHistory
+	PolicyChanges []PolicyHistory
+}
+
 func (s *Secret) VerifyPassword(pw string) bool {
 	input := s.assemblePassword(pw)
 	for i := 0; i != len(s.Password); i++ {
@@ -115,7 +120,7 @@ func NewUserService() *restful.WebService {
 		Param(restful.PathParameter("name", "User identifier")).
 		Doc("Returns all changes the user has made in the DB").
 		To(GetUserLogByName).
-		//TODO: Writes().
+		Writes(UserActionHistory{}).
 		Do(returnsInternalServerError, returnsNotFound, returnsBadRequest))
 
 	service.Route(service.GET("").
@@ -168,30 +173,31 @@ func getUserByName(name string) (User, error) {
 
 func GetUserLogByName(request *restful.Request, response *restful.Response) {
 	name := request.PathParameter("name")
-	ih, ph, err := getUserLogByName(name)
+	ul, err := getUserLogByName(name)
 	if err != nil {
 		response.WriteErrorString(http.StatusNotFound, ERROR_INVALID_ID)
 		log.Info(err)
 		return
 	}
-	//TODO: Unify the results before writing them
-	response.WriteEntity(ih)
-	response.WriteEntity(ph)
+	response.WriteEntity(ul)
 	return
 }
 
-func getUserLogByName(name string) ([]ItemHistory, []PolicyHistory, error) {
+func getUserLogByName(name string) (*UserActionHistory, error) {
 	ih := make([]ItemHistory, 0)
 	err := ihCol.Find(bson.M{"user": name}).All(&ih)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	ph := make([]PolicyHistory, 0)
 	err = phCol.Find(bson.M{"user": name}).All(&ph)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return ih, ph, nil
+	ul := new(UserActionHistory)
+	ul.ItemChanges = ih
+	ul.PolicyChanges = ph
+	return ul, nil
 }
 
 func ListUser(request *restful.Request, response *restful.Response) {
