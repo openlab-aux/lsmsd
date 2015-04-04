@@ -15,6 +15,7 @@ ___
   * Logging and error message overhaul
   * Better test coverage & code documentation
   * Websockets
+  * Manual
 
 ___
 # Documentation
