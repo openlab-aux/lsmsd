@@ -6,10 +6,10 @@ ListenTo = ":8080"
 Enabled = false
 Certificate = "./certfile.pem"
 KeyFile = "./keyfile.key"
-Pepper "./.pepper"
+Pepperfile = "./.pepper"
 [Database]
 Server = "localhost"
-Prefix = "lsmsd_"
+DB = "lsmsd_"
 [Mail]
 Enabled = false
 StartTLS = true
