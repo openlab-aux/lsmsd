@@ -35,6 +35,11 @@ type Mailconfig struct {
 	Username      string
 	Password      string
 	EMailAddress  string
+	Admins        []string
+}
+
+func (m *Mailconfig) Verify() error {
+	return nil
 }
 
 type MailNotificationService struct {
@@ -75,8 +80,4 @@ func (m *MailNotificationService) notifyAdmin() {
 }
 
 func (m *MailNotificationService) sendMail() {
-}
-
-func (m *Mailconfig) Verify() error {
-	return nil
 }

@@ -17,5 +17,6 @@ ServerAddress = ""
 Username = ""
 Password = ""
 EMailAddress = ""
+Admins = ""
 [Logging]
 Level = "Info"
