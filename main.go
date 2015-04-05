@@ -46,21 +46,35 @@ type Config struct {
 		Server string
 		DB     string
 	}
+	Mail struct {
+		Enabled       bool
+		StartTLS      bool
+		ServerAddress string
+		Username      string
+		Password      string
+		EMailAddress  string
+	}
 	Logging struct {
 		Level string
 	}
 }
 
 const (
-	defaultConfigPath     = "./config.gcfg"
-	defaultNetworkAddress = ":8080"
-	defaultLogLevel       = "INFO"
-	defaultCrypto         = false
-	defaultCertificate    = "./cert.pem"
-	defaultKeyfile        = "keyfile.key"
-	defaultDatabaseServer = "localhost"
-	defaultDatabase       = "lsmsd"
-	defaultPepperfile     = "./.pepper"
+	defaultConfigPath        = "./config.gcfg"
+	defaultNetworkAddress    = ":8080"
+	defaultLogLevel          = "INFO"
+	defaultCrypto            = false
+	defaultCertificate       = "./cert.pem"
+	defaultKeyfile           = "keyfile.key"
+	defaultDatabaseServer    = "localhost"
+	defaultDatabase          = "lsmsd"
+	defaultPepperfile        = "./.pepper"
+	defaultMailEnabled       = false
+	defaultMailStartTLS      = true
+	defaultMailServerAddress = ""
+	defaultMailUsername      = ""
+	defaultMailPassword      = ""
+	defaultMailEMailAddress  = ""
 )
 
 func main() {
@@ -69,12 +83,22 @@ func main() {
 	var configpath = flag.String("cfgpath", defaultConfigPath, "path to your config file")
 	var listento = flag.String("listento", defaultNetworkAddress, "listen to address and port")
 	var loglevel = flag.String("loglevel", defaultLogLevel, "verbosity")
+
 	var enableCrypto = flag.Bool("enablecrypto", defaultCrypto, "Use TLS instead of plain text")
 	var certificate = flag.String("certificate", defaultCertificate, "certificate path")
 	var pepper = flag.String("pepper", defaultPepperfile, "path to your pepperfile")
 	var keyfile = flag.String("keyfile", defaultKeyfile, "private key path")
+
 	var dbserver = flag.String("dbserver", defaultDatabaseServer, "address of your mongo db server")
 	var dbdb = flag.String("dbdb", defaultDatabase, "default database name")
+
+	var mailenabled = flag.Bool("enablemail", defaultMailEnabled, "enable email notifications")
+	var mailstarttls = flag.Bool("mailtls", defaultMailStartTLS, "use TLS when sending emails")
+	var mailserver = flag.String("mailserver", defaultMailServerAddress, "address and port of your smtp server")
+	var mailuser = flag.String("mailuser", defaultMailUsername, "smtp username")
+	var mailpassword = flag.String("mailpassword", defaultMailPassword, "smtp password")
+	var mailaddress = flag.String("mailaddress", defaultMailEMailAddress, "email address")
+
 	flag.Parse()
 	err := gcfg.ReadFileInto(&cfg, *configpath)
 
@@ -105,6 +129,25 @@ func main() {
 	}
 	if *pepper != defaultPepperfile {
 		cfg.Crypto.Pepperfile = *pepper
+	}
+
+	if *mailenabled != defaultMailEnabled {
+		cfg.Mail.Enabled = *mailenabled
+	}
+	if *mailstarttls != defaultMailStartTLS {
+		cfg.Mail.StartTLS = *mailstarttls
+	}
+	if *mailserver != defaultMailServerAddress {
+		cfg.Mail.ServerAddress = *mailserver
+	}
+	if *mailuser != defaultMailUsername {
+		cfg.Mail.Username = *mailuser
+	}
+	if *mailpassword != defaultMailPassword {
+		cfg.Mail.Password = *mailpassword
+	}
+	if *mailaddress != defaultMailEMailAddress {
+		cfg.Mail.EMailAddress = *mailaddress
 	}
 
 	switch cfg.Logging.Level {

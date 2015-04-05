@@ -10,5 +10,12 @@ Pepper "./.pepper"
 [Database]
 Server = "localhost"
 Prefix = "lsmsd_"
+[Mail]
+Enabled = false
+StartTLS = true
+ServerAddress = ""
+Username = ""
+Password = ""
+EMailAddress = ""
 [Logging]
 Level = "Info"
