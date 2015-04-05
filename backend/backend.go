@@ -143,6 +143,8 @@ func DebugLoggingFilter(rq *restful.Request, rs *restful.Response, ch *restful.F
 	log.WithFields(log.Fields{
 		"ID": id, "Content-Length": rq.Request.ContentLength}).
 		Debug()
+
+	ch.ProcessFilter(rq, rs)
 }
 
 func CloseIDGen() {
