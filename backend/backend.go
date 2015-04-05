@@ -24,6 +24,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
 	"gopkg.in/mgo.v2"
+	mrand "math/rand"
 	"net/http"
 	"os"
 )
@@ -107,6 +108,41 @@ func createPepper(path string) []byte {
 		log.Fatal(err)
 	}
 	return res
+}
+
+func DebugLoggingFilter(rq *restful.Request, rs *restful.Response, ch *restful.FilterChain) {
+	id := uint32(mrand.Int31())
+	log.WithFields(log.Fields{
+		"ID": id, "Path": rq.SelectedRoutePath()}).
+		Debug("Got Request")
+
+	log.WithFields(log.Fields{
+		"ID": id, "PathParameters": rq.PathParameters()}).
+		Debug()
+
+	log.WithFields(log.Fields{
+		"ID": id, "Method": rq.Request.Method}).
+		Debug()
+
+	log.WithFields(log.Fields{
+		"ID": id, "Protocol": rq.Request.Proto}).
+		Debug()
+
+	log.WithFields(log.Fields{
+		"ID": id, "Host": rq.Request.Header.Get("Host")}).
+		Debug()
+
+	log.WithFields(log.Fields{
+		"ID": id, "Upgrade": rq.Request.Header.Get("Upgrade")}).
+		Debug()
+
+	log.WithFields(log.Fields{
+		"ID": id, "User-Agent": rq.Request.Header.Get("User-Agent")}).
+		Debug()
+
+	log.WithFields(log.Fields{
+		"ID": id, "Content-Length": rq.Request.ContentLength}).
+		Debug()
 }
 
 func CloseIDGen() {

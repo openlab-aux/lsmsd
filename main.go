@@ -129,6 +129,10 @@ func main() {
 	restful.Add(backend.NewUserService())
 	restful.Add(backend.NewPolicyService())
 
+	if log.GetLevel() == log.DebugLevel {
+		restful.DefaultContainer.Filter(backend.DebugLoggingFilter)
+	}
+
 	config := swagger.Config{
 		WebServices: restful.DefaultContainer.RegisteredWebServices(),
 		//WebServicesUrl:  "", //cfg.Network.ListenTo,
