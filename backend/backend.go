@@ -62,6 +62,9 @@ func RegisterDatabase(s *mgo.Session, dbname string) {
 }
 
 func ReadPepper(path string) {
+	if path == "" {
+		log.Panic("Pepperpath empty")
+	}
 	f, er := os.Open(path)
 	if er != nil {
 		err := er.(*os.PathError)
