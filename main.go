@@ -52,29 +52,29 @@ type Config struct {
 }
 
 const (
-	DEFAULT_CONFIG_PATH     = "./config.gcfg"
-	DEFAULT_NETWORK_ADDRESS = ":8080"
-	DEFAULT_LOGLEVEL        = "INFO"
-	DEFAULT_CRYPTO          = false
-	DEFAULT_CERTIFICATE     = "./cert.pem"
-	DEFAULT_KEYFILE         = "keyfile.key"
-	DEFAULT_DATABASE_SERVER = "localhost"
-	DEFAULT_DATABASE_DB     = "lsmsd"
-	DEFAULT_PEPPERFILE      = "./.pepper"
+	defaultConfigPath     = "./config.gcfg"
+	defaultNetworkAddress = ":8080"
+	defaultLogLevel       = "INFO"
+	defaultCrypto         = false
+	defaultCertificate    = "./cert.pem"
+	defaultKeyfile        = "keyfile.key"
+	defaultDatabaseServer = "localhost"
+	defaultDatabase       = "lsmsd"
+	defaultPepperfile     = "./.pepper"
 )
 
 func main() {
 	log.WithFields(log.Fields{"Version": "0.1"}).Info("lsmsd starting")
 	var cfg Config
-	var configpath = flag.String("cfgpath", DEFAULT_CONFIG_PATH, "path to your config file")
-	var listento = flag.String("listento", DEFAULT_NETWORK_ADDRESS, "listen to address and port")
-	var loglevel = flag.String("loglevel", DEFAULT_LOGLEVEL, "verbosity")
-	var enable_crypto = flag.Bool("enablecrypto", DEFAULT_CRYPTO, "Use TLS instead of plain text")
-	var certificate = flag.String("certificate", DEFAULT_CERTIFICATE, "certificate path")
-	var pepper = flag.String("pepper", DEFAULT_PEPPERFILE, "path to your pepperfile")
-	var keyfile = flag.String("keyfile", DEFAULT_KEYFILE, "private key path")
-	var dbserver = flag.String("dbserver", DEFAULT_DATABASE_SERVER, "address of your mongo db server")
-	var dbdb = flag.String("dbdb", DEFAULT_DATABASE_DB, "default database name")
+	var configpath = flag.String("cfgpath", defaultConfigPath, "path to your config file")
+	var listento = flag.String("listento", defaultNetworkAddress, "listen to address and port")
+	var loglevel = flag.String("loglevel", defaultLogLevel, "verbosity")
+	var enableCrypto = flag.Bool("enablecrypto", defaultCrypto, "Use TLS instead of plain text")
+	var certificate = flag.String("certificate", defaultCertificate, "certificate path")
+	var pepper = flag.String("pepper", defaultPepperfile, "path to your pepperfile")
+	var keyfile = flag.String("keyfile", defaultKeyfile, "private key path")
+	var dbserver = flag.String("dbserver", defaultDatabaseServer, "address of your mongo db server")
+	var dbdb = flag.String("dbdb", defaultDatabase, "default database name")
 	flag.Parse()
 	err := gcfg.ReadFileInto(&cfg, *configpath)
 
@@ -82,28 +82,28 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if *listento != DEFAULT_NETWORK_ADDRESS {
+	if *listento != defaultNetworkAddress {
 		cfg.Network.ListenTo = *listento
 	}
-	if *loglevel != DEFAULT_LOGLEVEL {
+	if *loglevel != defaultLogLevel {
 		cfg.Logging.Level = *loglevel
 	}
-	if *enable_crypto != DEFAULT_CRYPTO {
-		cfg.Crypto.Enabled = *enable_crypto
+	if *enableCrypto != defaultCrypto {
+		cfg.Crypto.Enabled = *enableCrypto
 	}
-	if *certificate != DEFAULT_CERTIFICATE {
+	if *certificate != defaultCertificate {
 		cfg.Crypto.Certificate = *certificate
 	}
-	if *keyfile != DEFAULT_KEYFILE {
+	if *keyfile != defaultKeyfile {
 		cfg.Crypto.KeyFile = *keyfile
 	}
-	if *dbserver != DEFAULT_DATABASE_SERVER {
+	if *dbserver != defaultDatabaseServer {
 		cfg.Database.Server = *dbserver
 	}
-	if *dbdb != DEFAULT_DATABASE_DB {
+	if *dbdb != defaultDatabase {
 		cfg.Database.DB = *dbdb
 	}
-	if *pepper != DEFAULT_PEPPERFILE {
+	if *pepper != defaultPepperfile {
 		cfg.Crypto.Pepperfile = *pepper
 	}
 
