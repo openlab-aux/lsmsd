@@ -14,9 +14,10 @@ Prefix = "lsmsd_"
 Enabled = false
 StartTLS = true
 ServerAddress = ""
+Port = 587
 Username = ""
 Password = ""
 EMailAddress = ""
-Admins = ""
+Admin = ""
 [Logging]
 Level = "Info"
