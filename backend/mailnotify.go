@@ -166,7 +166,15 @@ func (m *MailNotificationService) deferSend(ma mail) {
 func (m *MailNotificationService) processDeferred() {
 }
 
-func (m *MailNotificationService) notifyAdmin(ma mail) {
+func (m *MailNotificationService) notifyAdmin(ma mail, err error) {
+	ma.body = "Error while transmitting email to: " + ma.header.To + "\n" + err.Error() + "\n" + ma.body
+	ma.header.Subject = "[ERROR]" + ma.header.Subject
+	ma.header.To = m.mc.Admin
+	ma.rcpt = m.mc.Admin
+	er := m.sendMail(ma)
+	if er != nil {
+		log.Warn("Failed to notify admin: " + er.Error())
+	}
 }
 
 func (m *MailNotificationService) sendMail(ma mail) error {
