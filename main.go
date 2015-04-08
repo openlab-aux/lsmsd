@@ -46,14 +46,7 @@ type Config struct {
 		Server string
 		DB     string
 	}
-	Mail struct {
-		Enabled       bool
-		StartTLS      bool
-		ServerAddress string
-		Username      string
-		Password      string
-		EMailAddress  string
-	}
+	Mail    backend.Mailconfig
 	Logging struct {
 		Level string
 	}
@@ -105,7 +98,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	if *listento != defaultNetworkAddress {
 		cfg.Network.ListenTo = *listento
 	}
@@ -164,7 +156,7 @@ func main() {
 	log.Info("Connection successful")
 	defer s.Close()
 
-	backend.RegisterDatabase(s, cfg.Database.DB)
+	backend.RegisterDatabase(s, cfg.Database.DB, &cfg.Mail)
 	backend.ReadPepper(cfg.Crypto.Pepperfile)
 	defer backend.CloseIDGen()
 	restful.DefaultContainer.Filter(restful.DefaultContainer.OPTIONSFilter)
@@ -175,6 +167,8 @@ func main() {
 	if log.GetLevel() == log.DebugLevel {
 		restful.DefaultContainer.Filter(backend.DebugLoggingFilter)
 	}
+
+	log.Debug(cfg)
 
 	config := swagger.Config{
 		WebServices: restful.DefaultContainer.RegisteredWebServices(),
