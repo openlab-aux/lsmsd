@@ -49,13 +49,16 @@ var pepper []byte
 
 var idgen *idgenerator
 
-func RegisterDatabase(s *mgo.Session, dbname string) {
+var mailnotify *MailNotificationService
+
+func RegisterDatabase(s *mgo.Session, dbname string, cfg *Mailconfig) {
 	uCol = s.DB(dbname).C("user")
 	iCol = s.DB(dbname).C("item")
 	ihCol = s.DB(dbname).C("item_history")
 	pCol = s.DB(dbname).C("policy")
 	phCol = s.DB(dbname).C("policy_history")
 	idgen = NewIDGenerator(s.DB(dbname).C("counters"))
+	mailnotify = NewMailNotificationService(s.DB(dbname).C("deferred"), cfg)
 }
 
 func ReadPepper(path string) {

@@ -156,7 +156,7 @@ func main() {
 	log.Info("Connection successful")
 	defer s.Close()
 
-	backend.RegisterDatabase(s, cfg.Database.DB)
+	backend.RegisterDatabase(s, cfg.Database.DB, &cfg.Mail)
 	backend.ReadPepper(cfg.Crypto.Pepperfile)
 	defer backend.CloseIDGen()
 	restful.DefaultContainer.Filter(restful.DefaultContainer.OPTIONSFilter)

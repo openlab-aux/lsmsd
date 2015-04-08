@@ -52,7 +52,6 @@ func (m *Mailconfig) Verify() error {
 type MailNotificationService struct {
 	status         chan int // status channel, 1 triggers an exit
 	msg            chan mail
-	user           *mgo.Collection
 	deferred       *mgo.Collection
 	mc             *Mailconfig
 	wg             sync.WaitGroup
@@ -103,10 +102,9 @@ const (
 	mailStatusAttemptOffset
 )
 
-func NewMailNotificationService(user /*, deferred */ *mgo.Collection, mailcfg *Mailconfig) *MailNotificationService {
+func NewMailNotificationService(deferred *mgo.Collection, mailcfg *Mailconfig) *MailNotificationService {
 	res := new(MailNotificationService)
-	res.user = user
-	//res.deferred = deferred
+	res.deferred = deferred
 	res.mc = mailcfg
 	res.status = make(chan int)
 	res.msg = make(chan mail)
@@ -115,7 +113,7 @@ func NewMailNotificationService(user /*, deferred */ *mgo.Collection, mailcfg *M
 	return res
 }
 
-func (m *MailNotificationService) AddMailToQueue(rcpt, text string) {
+func (m *MailNotificationService) AddMailToQueue(rcpt, subject, text string) {
 	ml := new(mail)
 	ml.status = mailStatusNew
 	ml.rcpt = rcpt
@@ -124,7 +122,7 @@ func (m *MailNotificationService) AddMailToQueue(rcpt, text string) {
 	ml.header.Date = time.Now()
 	ml.header.From = "lsmsd Notification Service <" + m.mc.EMailAddress + ">"
 	ml.header.ReturnPath = m.mc.Admin
-	ml.header.Subject = "Testnotify"
+	ml.header.Subject = subject
 	ml.header.To = rcpt
 	m.msg <- *ml
 }
