@@ -20,13 +20,13 @@
 package backend
 
 import (
-	log "github.com/Sirupsen/logrus"
-	"gopkg.in/mgo.v2"
-	//	"gopkg.in/mgo.v2/bson"
 	"crypto/tls"
 	"errors"
 	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"github.com/fatih/structs"
+	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 	"net/smtp"
 	"strconv"
 	"sync"
@@ -50,15 +50,17 @@ func (m *Mailconfig) Verify() error {
 }
 
 type MailNotificationService struct {
-	status   chan int // status channel, 1 triggers an exit
-	msg      chan mail
-	user     *mgo.Collection
-	deferred *mgo.Collection
-	mc       *Mailconfig
-	wg       sync.WaitGroup
+	status         chan int // status channel, 1 triggers an exit
+	msg            chan mail
+	user           *mgo.Collection
+	deferred       *mgo.Collection
+	mc             *Mailconfig
+	wg             sync.WaitGroup
+	nextDefAttempt time.Time
 }
 
 type mail struct {
+	Id          bson.ObjectId `bson:"_id,omitempty"`
 	header      header
 	status      uint
 	rcpt        string
@@ -146,12 +148,18 @@ func (m *MailNotificationService) processQueue() {
 				err := m.sendMail(ma)
 				if err != nil {
 					//TODO: check for permanent failure
+					m.deferSend(ma)
 					log.Warn(err)
 				}
 
 			default:
 			}
 		}
+		if time.Now().After(m.nextDefAttempt) {
+			m.nextDefAttempt = time.Now().Add(6 * time.Hour)
+			m.processDeferred()
+		}
+
 		if !hit {
 			time.Sleep(200 * time.Millisecond)
 		} else {
@@ -161,9 +169,25 @@ func (m *MailNotificationService) processQueue() {
 }
 
 func (m *MailNotificationService) deferSend(ma mail) {
+	err := m.deferred.Insert(ma)
+	if err != nil {
+		m.notifyAdmin(ma, err)
+	}
 }
 
 func (m *MailNotificationService) processDeferred() {
+	ma := make([]mail, 0)
+	err := m.deferred.Find(nil).All(&ma)
+	for i := 0; i != len(ma); i++ {
+		err = m.sendMail(ma[i])
+		if err != nil {
+			m.notifyAdmin(ma[i], err)
+		}
+		err = m.deferred.Remove(bson.M{"_id": ma[i].Id})
+		if err != nil {
+			m.notifyAdmin(ma[i], err)
+		}
+	}
 }
 
 func (m *MailNotificationService) notifyAdmin(ma mail, err error) {
