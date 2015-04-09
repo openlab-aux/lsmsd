@@ -159,6 +159,9 @@ func main() {
 	backend.RegisterDatabase(s, cfg.Database.DB, &cfg.Mail)
 	backend.ReadPepper(cfg.Crypto.Pepperfile)
 	defer backend.CloseIDGen()
+	if cfg.Mail.Enabled {
+		defer backend.CloseMailNotifier()
+	}
 	restful.DefaultContainer.Filter(restful.DefaultContainer.OPTIONSFilter)
 	restful.Add(backend.NewItemService())
 	restful.Add(backend.NewUserService())

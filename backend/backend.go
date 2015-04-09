@@ -58,7 +58,9 @@ func RegisterDatabase(s *mgo.Session, dbname string, cfg *Mailconfig) {
 	pCol = s.DB(dbname).C("policy")
 	phCol = s.DB(dbname).C("policy_history")
 	idgen = NewIDGenerator(s.DB(dbname).C("counters"))
-	mailnotify = NewMailNotificationService(s.DB(dbname).C("deferred"), cfg)
+	if cfg.Enabled {
+		mailnotify = NewMailNotificationService(s.DB(dbname).C("deferred"), cfg)
+	}
 }
 
 func ReadPepper(path string) {
@@ -152,6 +154,10 @@ func DebugLoggingFilter(rq *restful.Request, rs *restful.Response, ch *restful.F
 
 func CloseIDGen() {
 	idgen.StopIDGenerator()
+}
+
+func CloseMailNotifier() {
+	mailnotify.Quit()
 }
 
 func returnsInternalServerError(b *restful.RouteBuilder) {
