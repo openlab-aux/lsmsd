@@ -20,10 +20,33 @@
 package backend
 
 import (
+	"github.com/emicklei/go-restful"
 	dmp "github.com/sergi/go-diff/diffmatchpatch"
 	"math/rand"
+	"net/http"
+	"net/http/httptest"
+	"strconv"
 	"testing"
 )
+
+func Test_GetItemByIdReturns400InvalidID(t *testing.T) {
+	cont := restful.NewContainer()
+	cont.Add(NewItemService())
+	s, err := startTestDB()
+	if err != nil {
+		t.Error("failed" + err.Error())
+	}
+	defer flushAndCloseTestDB(s, t)
+
+	httpRequest, _ := http.NewRequest("GET", "/item/232323", nil)
+	httpRequest.Header.Set("Content-Type", restful.MIME_JSON)
+	httpWriter := httptest.NewRecorder()
+
+	cont.ServeHTTP(httpWriter, httpRequest)
+	if httpWriter.Code != http.StatusNotFound {
+		t.Error("failed expected:" + strconv.Itoa(http.StatusNotFound) + "\n Got:" + strconv.Itoa(httpWriter.Code))
+	}
+}
 
 func Test_uint64Contains(t *testing.T) {
 	A := []uint64{1, 2}
