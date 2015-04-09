@@ -48,6 +48,25 @@ func Test_GetItemByIdReturns400InvalidID(t *testing.T) {
 	}
 }
 
+func Test_GetItemByIdReturns500BadRequest(t *testing.T) {
+	cont := restful.NewContainer()
+	cont.Add(NewItemService())
+	s, err := startTestDB()
+	if err != nil {
+		t.Error("failed: " + err.Error())
+	}
+	defer flushAndCloseTestDB(s, t)
+
+	req, _ := http.NewRequest("GET", "/item/ſḥịŧ", nil)
+	req.Header.Set("Content-Type", restful.MIME_JSON)
+	hw := httptest.NewRecorder()
+
+	cont.ServeHTTP(hw, req)
+	if hw.Code != http.StatusBadRequest {
+		t.Error("failed. expected:" + strconv.Itoa(http.StatusBadRequest) + "\n Got:" + strconv.Itoa(hw.Code))
+	}
+}
+
 func Test_uint64Contains(t *testing.T) {
 	A := []uint64{1, 2}
 	B := []uint64{1, 3}
