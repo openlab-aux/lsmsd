@@ -30,8 +30,7 @@ import (
 )
 
 func Test_GetItemByIdReturns400InvalidID(t *testing.T) {
-	cont := restful.NewContainer()
-	cont.Add(NewItemService())
+	cont := newTestContainer()
 	s, err := startTestDB()
 	if err != nil {
 		t.Error("failed" + err.Error())
@@ -49,8 +48,7 @@ func Test_GetItemByIdReturns400InvalidID(t *testing.T) {
 }
 
 func Test_GetItemByIdReturns500BadRequest(t *testing.T) {
-	cont := restful.NewContainer()
-	cont.Add(NewItemService())
+	cont := newTestContainer()
 	s, err := startTestDB()
 	if err != nil {
 		t.Error("failed: " + err.Error())

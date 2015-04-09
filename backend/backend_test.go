@@ -20,6 +20,7 @@
 package backend
 
 import (
+	"github.com/emicklei/go-restful"
 	"gopkg.in/mgo.v2"
 	"testing"
 )
@@ -56,4 +57,13 @@ func flushAndCloseTestDB(m *mgo.Session, t *testing.T) {
 	}
 	idgen.StopIDGenerator()
 	m.Close()
+}
+
+func newTestContainer() *restful.Container {
+	cont := restful.NewContainer()
+	cont.Filter(restful.DefaultContainer.OPTIONSFilter)
+	cont.Add(NewItemService())
+	cont.Add(NewUserService())
+	cont.Add(NewPolicyService())
+	return cont
 }
