@@ -24,8 +24,8 @@ import (
 	//	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
-	"github.com/openlab-aux/lsmsd/backend"
 	db "github.com/openlab-aux/lsmsd/database"
+	"github.com/openlab-aux/lsmsd/webservice"
 
 	"net/http"
 	//	"time"
@@ -48,7 +48,7 @@ type Config struct {
 		Server string
 		DB     string
 	}
-	Mail    backend.Mailconfig
+	Mail    webservice.Mailconfig
 	Logging struct {
 		Level string
 	}
@@ -161,10 +161,10 @@ func main() {
 	itemp := db.NewItemDBProvider(s, cfg.Database.DB)
 	polp := db.NewPolicyDBProvider(s, cfg.Database.DB)
 	userp := db.NewUserDBProvider(s, itemp, polp, cfg.Database.DB)
-	auth := backend.NewBasicAuthService(userp)
-	iws := backend.NewItemWebService(itemp, auth)
-	pws := backend.NewPolicyService(polp, auth)
-	uws := backend.NewUserService(userp, auth)
+	auth := webservice.NewBasicAuthService(userp)
+	iws := webservice.NewItemWebService(itemp, auth)
+	pws := webservice.NewPolicyService(polp, auth)
+	uws := webservice.NewUserService(userp, auth)
 
 	restful.DefaultContainer.Filter(restful.DefaultContainer.OPTIONSFilter)
 	restful.Add(iws.S)
@@ -172,7 +172,7 @@ func main() {
 	restful.Add(uws.S)
 
 	if log.GetLevel() == log.DebugLevel {
-		restful.DefaultContainer.Filter(backend.DebugLoggingFilter)
+		restful.DefaultContainer.Filter(webservice.DebugLoggingFilter)
 	}
 
 	log.Debug(cfg)
