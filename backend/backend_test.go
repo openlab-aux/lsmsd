@@ -56,6 +56,7 @@ func flushAndCloseTestDB(m *mgo.Session, t *testing.T) {
 		t.Error("failed to clean up: " + err.Error())
 	}
 	idgen.StopIDGenerator()
+	idgen.ResetCounter()
 	m.Close()
 }
 

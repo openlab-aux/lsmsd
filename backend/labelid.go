@@ -54,6 +54,13 @@ func (i *idgenerator) StopIDGenerator() {
 	i.wg.Wait()
 }
 
+func (i *idgenerator) ResetCounter() {
+	err := i.c.DropCollection()
+	if err != nil && err.Error() != "ns not found" {
+		log.Panic(err.Error())
+	}
+}
+
 // GenerateID is a blocking function to get a incrementing id
 func (i *idgenerator) GenerateID() uint64 {
 	res := make(chan uint64)
