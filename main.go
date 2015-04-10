@@ -25,6 +25,8 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
 	"github.com/openlab-aux/lsmsd/backend"
+	db "github.com/openlab-aux/lsmsd/database"
+
 	"net/http"
 	//	"time"
 	"code.google.com/p/gcfg"
@@ -158,12 +160,14 @@ func main() {
 
 	backend.RegisterDatabase(s, cfg.Database.DB, &cfg.Mail)
 	backend.ReadPepper(cfg.Crypto.Pepperfile)
-	defer backend.CloseIDGen()
+
+	itemp := db.NewItemDBProvider(s, cfg.Database.DB)
+	iws := backend.NewItemWebService(itemp)
 	if cfg.Mail.Enabled {
 		defer backend.CloseMailNotifier()
 	}
 	restful.DefaultContainer.Filter(restful.DefaultContainer.OPTIONSFilter)
-	restful.Add(backend.NewItemService())
+	restful.Add(iws.S)
 	restful.Add(backend.NewUserService())
 	restful.Add(backend.NewPolicyService())
 
