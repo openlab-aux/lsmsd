@@ -11,11 +11,12 @@ This software needs a running instance of mongoDB. For install instructions [cli
 
 ___
 # Roadmap for 0.1
-  * Notifications via E-Mail / XMPP
+  * ~~Notifications via E-Mail~~ / XMPP
   * Logging and error message overhaul
   * Better test coverage & code documentation
   * Websockets
   * Manual
+  * Item images (GridFS)
 
 ___
 # Documentation
