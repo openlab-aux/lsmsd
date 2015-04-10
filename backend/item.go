@@ -37,7 +37,7 @@ type Item struct {
 	ID          bson.ObjectId `bson:"_id,omitempty" json:"-"`
 	EID         uint64        `json:"Id"`
 	Name        string        `bson:",omitempty"`
-	Description string        `bson:",omitempty"`
+	Description string        `bson:",omitempty" description:"This string should be in Github Flavored Markdown"`
 	Contains    []uint64      `bson:",omitempty"`
 	Owner       string        `bson:",omitempty"`
 	Maintainer  string        `bson:",omitempty"`
