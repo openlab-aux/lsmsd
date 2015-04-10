@@ -34,6 +34,18 @@ type ItemDBProvider struct {
 	idgen *idgenerator
 }
 
+func NewItemDBProvider(s *mgo.Session, dbname string) *ItemDBProvider {
+	res := new(ItemDBProvider)
+	res.c = s.DB(dbname).C("item")
+	res.ch = s.DB(dbname).C("item_history")
+	res.idgen = NewIDGenerator(s.DB(dbname).C("counters"))
+	return res
+}
+
+func (p *ItemDBProvider) Stop() {
+	p.idgen.StopIDGenerator()
+}
+
 func (p *ItemDBProvider) GetItemById(id uint64) (Item, error) {
 	res := Item{}
 	err := p.c.Find(bson.M{"eid": id}).One(&res)
