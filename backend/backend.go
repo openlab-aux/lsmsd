@@ -40,24 +40,17 @@ const (
 )
 
 var uCol *mgo.Collection
-var iCol *mgo.Collection
-var ihCol *mgo.Collection
 var pCol *mgo.Collection
 var phCol *mgo.Collection
 
 var pepper []byte
 
-var idgen *idgenerator
-
 var mailnotify *MailNotificationService
 
 func RegisterDatabase(s *mgo.Session, dbname string, cfg *Mailconfig) {
 	uCol = s.DB(dbname).C("user")
-	iCol = s.DB(dbname).C("item")
-	ihCol = s.DB(dbname).C("item_history")
 	pCol = s.DB(dbname).C("policy")
 	phCol = s.DB(dbname).C("policy_history")
-	idgen = NewIDGenerator(s.DB(dbname).C("counters"))
 	if cfg.Enabled {
 		mailnotify = NewMailNotificationService(s.DB(dbname).C("deferred"), cfg)
 	}
@@ -150,10 +143,6 @@ func DebugLoggingFilter(rq *restful.Request, rs *restful.Response, ch *restful.F
 		Debug()
 
 	ch.ProcessFilter(rq, rs)
-}
-
-func CloseIDGen() {
-	idgen.StopIDGenerator()
 }
 
 func CloseMailNotifier() {
