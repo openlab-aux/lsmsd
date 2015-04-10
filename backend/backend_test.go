@@ -34,7 +34,7 @@ func startTestDB() (*mgo.Session, error) {
 	return s, nil
 }
 
-func flushAndCloseTestDB(m *mgo.Session, t *testing.T) {
+func flushAndCloseTestDB(m *mgo.Session, t testing.TB) {
 	err := uCol.DropCollection()
 	if err != nil && err.Error() != "ns not found" {
 		t.Error("failed to clean up: " + err.Error())
