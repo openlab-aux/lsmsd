@@ -26,25 +26,19 @@ import (
 	"net/http"
 	//"strconv"
 	//"strings"
-	"gopkg.in/mgo.v2/bson"
+	db "github.com/openlab-aux/lsmsd/database"
 )
 
-type User struct {
-	ID       bson.ObjectId `bson:"_id,omitempty" json:"-"`
-	Name     string        `description:"The unique identifier of a user. Let your user know that they should choose it wisely"`
-	EMail    string
-	Password string `bson:"-" json:",omitempty" description:"Use this field to set a new password. This field will never occour in responses."`
-
-	Secret Secret `json:"-"`
+type UserWebService struct {
+	d *db.UserDBProvider
+	S *restful.WebService
+	a *BasicAuthService
 }
 
-type UserActionHistory struct {
-	ItemChanges   []ItemHistory
-	PolicyChanges []PolicyHistory
-}
-
-
-func NewUserService() *restful.WebService {
+func NewUserService(d *db.UserDBProvider, a *BasicAuthService) *UserWebService {
+	res := new(UserWebService)
+	res.d = d
+	res.a = a
 	service := new(restful.WebService)
 	service.
 		Path("/user").
@@ -56,50 +50,51 @@ func NewUserService() *restful.WebService {
 	service.Route(service.GET("/{name}").
 		Param(restful.PathParameter("name", "User identifier")).
 		Doc("Returns public accessable information about the referenced user").
-		To(GetUserByName).
-		Writes(User{}).
+		To(res.GetUserByName).
+		Writes(db.User{}).
 		Do(returnsInternalServerError, returnsNotFound, returnsBadRequest))
 
 	service.Route(service.GET("/{name}/log").
 		Param(restful.PathParameter("name", "User identifier")).
 		Doc("Returns all changes the user has made in the DB").
-		To(GetUserLogByName).
-		Writes(UserActionHistory{}).
+		To(res.GetUserLogByName).
+		Writes(db.UserActionHistory{}).
 		Do(returnsInternalServerError, returnsNotFound, returnsBadRequest))
 
 	service.Route(service.GET("").
 		Doc("List all users (this may be replaced by a paginated version)").
-		To(ListUser).
-		Writes([]User{}).
+		To(res.ListUser).
+		Writes([]db.User{}).
 		Do(returnsInternalServerError))
 
 	service.Route(service.PUT("").
-		Filter(basicAuthFilter).
+		Filter(res.a.Auth).
 		Doc("Update user information").
-		To(UpdateUser).
-		Reads(User{}).
+		To(res.UpdateUser).
+		Reads(db.User{}).
 		Do(returnsInternalServerError, returnsNotFound, returnsUpdateSuccessful, returnsBadRequest))
 
 	service.Route(service.POST("").
 		Doc("Register a new user").
-		To(CreateUser).
-		Reads(User{}).
+		To(res.CreateUser).
+		Reads(db.User{}).
 		Returns(http.StatusOK, "Insert successful", "/user/{name}").
 		Returns(http.StatusUnauthorized, "This username is not available", nil).
 		Do(returnsInternalServerError, returnsBadRequest))
 
 	service.Route(service.DELETE("/{name}").
-		Filter(basicAuthFilter).
+		Filter(res.a.Auth).
 		Param(restful.PathParameter("name", "User identifier")).
 		Doc("Delete a user").
-		To(DeleteUser).
+		To(res.DeleteUser).
 		Do(returnsInternalServerError, returnsNotFound, returnsDeleteSuccessful, returnsBadRequest))
-	return service
+	res.S = service
+	return res
 }
 
-func GetUserByName(request *restful.Request, response *restful.Response) {
+func (p *UserWebService) GetUserByName(request *restful.Request, response *restful.Response) {
 	name := request.PathParameter("name")
-	user, err := getUserByName(name)
+	user, err := p.d.GetUserByName(name)
 	if err != nil {
 		response.WriteErrorString(http.StatusBadRequest, ERROR_INVALID_ID)
 		log.WithFields(log.Fields{"Error Msg": err}).
@@ -109,15 +104,9 @@ func GetUserByName(request *restful.Request, response *restful.Response) {
 	response.WriteEntity(user)
 }
 
-func getUserByName(name string) (User, error) {
-	res := User{}
-	err := uCol.Find(bson.M{"name": name}).One(&res)
-	return res, err
-}
-
-func GetUserLogByName(request *restful.Request, response *restful.Response) {
+func (p *UserWebService) GetUserLogByName(request *restful.Request, response *restful.Response) {
 	name := request.PathParameter("name")
-	ul, err := getUserLogByName(name)
+	ul, err := p.d.GetUserLogByName(name)
 	if err != nil {
 		response.WriteErrorString(http.StatusNotFound, ERROR_INVALID_ID)
 		log.Info(err)
@@ -127,25 +116,8 @@ func GetUserLogByName(request *restful.Request, response *restful.Response) {
 	return
 }
 
-func getUserLogByName(name string) (*UserActionHistory, error) {
-	ih := make([]ItemHistory, 0)
-	err := ihCol.Find(bson.M{"user": name}).All(&ih)
-	if err != nil {
-		return nil, err
-	}
-	ph := make([]PolicyHistory, 0)
-	err = phCol.Find(bson.M{"user": name}).All(&ph)
-	if err != nil {
-		return nil, err
-	}
-	ul := new(UserActionHistory)
-	ul.ItemChanges = ih
-	ul.PolicyChanges = ph
-	return ul, nil
-}
-
-func ListUser(request *restful.Request, response *restful.Response) {
-	usr, err := listUser()
+func (p *UserWebService) ListUser(request *restful.Request, response *restful.Response) {
+	usr, err := p.d.ListUser()
 	if err != nil {
 		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
 		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_INTERNAL)
@@ -154,14 +126,8 @@ func ListUser(request *restful.Request, response *restful.Response) {
 	response.WriteEntity(usr)
 }
 
-func listUser() ([]User, error) {
-	usr := make([]User, 0)
-	err := uCol.Find(nil).All(&usr)
-	return usr, err
-}
-
-func UpdateUser(request *restful.Request, response *restful.Response) {
-	usr := new(User)
+func (p *UserWebService) UpdateUser(request *restful.Request, response *restful.Response) {
+	usr := new(db.User)
 	err := request.ReadEntity(usr)
 	if err != nil {
 		response.WriteErrorString(http.StatusBadRequest, ERROR_INVALID_INPUT)
@@ -169,13 +135,13 @@ func UpdateUser(request *restful.Request, response *restful.Response) {
 		return
 	}
 
-	ex := checkUserExistance(usr)
+	ex := p.d.CheckUserExistance(usr)
 	if ex {
 		if usr.Password != "" {
 			log.Debug("User supplied new password.")
 			err = usr.Secret.SetPassword(usr.Password)
 		} else {
-			temp, err := getUserByName(usr.Name)
+			temp, err := p.d.GetUserByName(usr.Name)
 			if err != nil {
 			} else {
 				usr.Secret = temp.Secret // if no new password will be set, preserve old
@@ -183,7 +149,7 @@ func UpdateUser(request *restful.Request, response *restful.Response) {
 		}
 		if err != nil { //fall through to error handling
 		} else {
-			err = updateUser(usr)
+			err = p.d.UpdateUser(usr)
 		}
 		if err != nil {
 			response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
@@ -198,12 +164,8 @@ func UpdateUser(request *restful.Request, response *restful.Response) {
 	}
 }
 
-func updateUser(usr *User) error {
-	return uCol.Update(bson.M{"name": usr.Name}, usr)
-}
-
-func CreateUser(request *restful.Request, response *restful.Response) {
-	usr := new(User)
+func (p *UserWebService) CreateUser(request *restful.Request, response *restful.Response) {
+	usr := new(db.User)
 	err := request.ReadEntity(usr)
 	log.WithFields(log.Fields{"Username": usr.Name}).Info("Attempted user registration")
 	log.Debug(usr)
@@ -213,7 +175,7 @@ func CreateUser(request *restful.Request, response *restful.Response) {
 		return
 	}
 
-	ex := checkUserExistance(usr)
+	ex := p.d.CheckUserExistance(usr)
 
 	if ex {
 		response.WriteErrorString(http.StatusUnauthorized, "This username is not available")
@@ -223,7 +185,7 @@ func CreateUser(request *restful.Request, response *restful.Response) {
 	if err != nil {
 	} else {
 
-		err = createUser(usr)
+		err = p.d.CreateUser(usr)
 	}
 	if err != nil {
 		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
@@ -233,38 +195,14 @@ func CreateUser(request *restful.Request, response *restful.Response) {
 	response.WriteEntity("/user/" + usr.Name)
 }
 
-func checkUserExistance(usr *User) bool {
-	temp := User{}
-	err := uCol.Find(bson.M{"name": usr.Name}).One(&temp)
-	if err != nil {
-		if err.Error() == "not found" {
-			return false
-		} else {
-			log.WithFields(log.Fields{"Err": err}).
-				Debug("TODO: check more error codes here")
-			return true // if something strange in the neighbourhood …
-			// what you gonna do? - do not register a new user!
-		}
-	}
-	return true
-}
-
-func createUser(usr *User) error {
-	return uCol.Insert(usr)
-}
-
-func DeleteUser(request *restful.Request, response *restful.Response) {
+func (p *UserWebService) DeleteUser(request *restful.Request, response *restful.Response) {
 	name := request.PathParameter("name")
 	log.WithFields(log.Fields{"Name": name}).Info("Got user DELETE request")
-	err := deleteUser(name)
+	err := p.d.DeleteUser(name)
 	if err != nil {
 		log.WithFields(log.Fields{"Error Msg": err}).Info(ERROR_INTERNAL)
 		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
 		return
 	}
 	response.WriteEntity(true)
-}
-
-func deleteUser(name string) error {
-	return uCol.Remove(bson.M{"name": name})
 }
