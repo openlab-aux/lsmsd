@@ -20,6 +20,7 @@
 package backend
 
 import (
+	"encoding/json"
 	"github.com/emicklei/go-restful"
 	dmp "github.com/sergi/go-diff/diffmatchpatch"
 	"math/rand"
@@ -62,6 +63,64 @@ func Test_GetItemByIdReturns500BadRequest(t *testing.T) {
 	cont.ServeHTTP(hw, req)
 	if hw.Code != http.StatusBadRequest {
 		t.Error("failed. expected:" + strconv.Itoa(http.StatusBadRequest) + "\n Got:" + strconv.Itoa(hw.Code))
+	}
+}
+
+func TestGetItemById(t *testing.T) {
+	cont := newTestContainer()
+	s, err := startTestDB()
+	if err != nil {
+		t.Error("failed: " + err.Error())
+	}
+	defer flushAndCloseTestDB(s, t)
+	itm := Item{EID: 23, Name: "testitem", Description: "testdesc", Contains: []uint64{2, 3}, Owner: "testuser", Maintainer: "test", Usage: "test", Discard: "disc"}
+	id, err := createItem(&itm)
+	if err != nil {
+		t.Error("failed: " + err.Error())
+	}
+
+	req, _ := http.NewRequest("GET", "/item/"+strconv.FormatUint(id, 10), nil)
+	req.Header.Set("Content-Type", restful.MIME_JSON)
+	hw := httptest.NewRecorder()
+
+	cont.ServeHTTP(hw, req)
+	if hw.Code != http.StatusOK {
+		t.Error("failed. expected:" + strconv.Itoa(http.StatusOK) + "\n Got:" + strconv.Itoa(hw.Code))
+	}
+	body := hw.Body.Bytes()
+	jitm := new(Item)
+	err = json.Unmarshal(body, jitm)
+	if err != nil {
+		t.Error("failed: " + err.Error())
+	}
+	if itm.EID != jitm.EID {
+		t.Error("id injection")
+	}
+	if itm.Name != jitm.Name {
+		t.Error()
+	}
+	if itm.Description != jitm.Description {
+		t.Error()
+	}
+	if len(itm.Contains) != len(jitm.Contains) {
+		t.Error()
+	}
+	for i := 0; i != len(itm.Contains); i++ {
+		if itm.Contains[i] != jitm.Contains[i] {
+			t.Error()
+		}
+	}
+	if itm.Owner != jitm.Owner {
+		t.Error()
+	}
+	if itm.Maintainer != jitm.Maintainer {
+		t.Error()
+	}
+	if itm.Usage != jitm.Usage {
+		t.Error()
+	}
+	if itm.Discard != jitm.Discard {
+		t.Error()
 	}
 }
 
