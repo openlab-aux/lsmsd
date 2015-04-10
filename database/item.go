@@ -61,6 +61,12 @@ func (p *ItemDBProvider) GetItemLog(id uint64) ([]ItemHistory, error) {
 	return res, err
 }
 
+func (p *ItemDBProvider) GetItemLogByUsername(name string) (*[]ItemHistory, error) {
+	i := make([]ItemHistory, 0)
+	err := p.ch.Find(bson.M{"user": name}).All(&i)
+	return &i, err
+}
+
 func (p *ItemDBProvider) CreateItem(itm *Item) (uint64, error) {
 	itm.EID = p.idgen.GenerateID()
 	log.WithFields(log.Fields{"ID": itm.EID}).Debug("Generated ID")

@@ -34,10 +34,14 @@ import (
 type ItemWebService struct {
 	d *db.ItemDBProvider
 	S *restful.WebService
+	a *BasicAuthService
 }
 
-func NewItemWebService(d *db.ItemDBProvider) *ItemWebService {
+func NewItemWebService(d *db.ItemDBProvider, a *BasicAuthService) *ItemWebService {
 	res := new(ItemWebService)
+	res.d = d
+	res.a = a
+
 	service := new(restful.WebService)
 	service.
 		Path("/item").
@@ -68,14 +72,14 @@ func NewItemWebService(d *db.ItemDBProvider) *ItemWebService {
 		Do(returnsInternalServerError))
 
 	service.Route(service.PUT("").
-		Filter(basicAuthFilter).
+		Filter(res.a.Auth).
 		Doc("Update a item.").
 		To(res.UpdateItem).
 		Reads(db.Item{}).
 		Do(returnsInternalServerError, returnsNotFound, returnsUpdateSuccessful, returnsBadRequest))
 
 	service.Route(service.POST("").
-		Filter(basicAuthFilter).
+		Filter(res.a.Auth).
 		Doc("Insert a item into the database").
 		To(res.CreateItem).
 		Reads(db.Item{}).
@@ -83,14 +87,13 @@ func NewItemWebService(d *db.ItemDBProvider) *ItemWebService {
 		Do(returnsInternalServerError, returnsBadRequest))
 
 	service.Route(service.DELETE("/{id}").
-		Filter(basicAuthFilter).
+		Filter(res.a.Auth).
 		Param(restful.PathParameter("id", "Item ID")).
 		Doc("Delete a item").
 		To(res.DeleteItem).
 		Do(returnsInternalServerError, returnsNotFound, returnsDeleteSuccessful, returnsBadRequest))
 
 	res.S = service
-	res.d = d
 	return res
 }
 
