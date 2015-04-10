@@ -158,18 +158,18 @@ func main() {
 	log.Info("Connection successful")
 	defer s.Close()
 
-	backend.RegisterDatabase(s, cfg.Database.DB, &cfg.Mail)
-	backend.ReadPepper(cfg.Crypto.Pepperfile)
-
 	itemp := db.NewItemDBProvider(s, cfg.Database.DB)
-	iws := backend.NewItemWebService(itemp)
-	if cfg.Mail.Enabled {
-		defer backend.CloseMailNotifier()
-	}
+	polp := db.NewPolicyDBProvider(s, cfg.Database.DB)
+	userp := db.NewUserDBProvider(s, itemp, polp, cfg.Database.DB)
+	auth := backend.NewBasicAuthService(userp)
+	iws := backend.NewItemWebService(itemp, auth)
+	pws := backend.NewPolicyService(polp, auth)
+	uws := backend.NewUserService(userp, auth)
+
 	restful.DefaultContainer.Filter(restful.DefaultContainer.OPTIONSFilter)
 	restful.Add(iws.S)
-	restful.Add(backend.NewUserService())
-	restful.Add(backend.NewPolicyService())
+	restful.Add(pws.S)
+	restful.Add(uws.S)
 
 	if log.GetLevel() == log.DebugLevel {
 		restful.DefaultContainer.Filter(backend.DebugLoggingFilter)
