@@ -25,6 +25,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
 	db "github.com/openlab-aux/lsmsd/database"
+	"github.com/openlab-aux/lsmsd/notification"
 	"github.com/openlab-aux/lsmsd/webservice"
 
 	"net/http"
@@ -48,7 +49,7 @@ type Config struct {
 		Server string
 		DB     string
 	}
-	Mail    webservice.Mailconfig
+	Mail    notification.Mailconfig
 	Logging struct {
 		Level string
 	}

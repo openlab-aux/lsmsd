@@ -17,7 +17,7 @@
  *    Authors: Stefan Luecke <glaxx@glaxx.net>
  */
 
-package webservice
+package notification
 
 import (
 	"crypto/tls"
