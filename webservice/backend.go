@@ -17,16 +17,13 @@
  *    Authors: Stefan Luecke <glaxx@glaxx.net>
  */
 
-package backend
+package webservice
 
 import (
-	"crypto/rand"
 	log "github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
-	"gopkg.in/mgo.v2"
 	mrand "math/rand"
 	"net/http"
-	"os"
 )
 
 const (
@@ -36,84 +33,7 @@ const (
 	ERROR_INTERNAL      = "Error: Internal Server Error"
 	ERROR_INSERT        = "Error: DB Insert failed"
 	ERROR_QUERY         = "Error: DB Query failed"
-	PEPPER_SIZE         = 64
 )
-
-var uCol *mgo.Collection
-var iCol *mgo.Collection
-var ihCol *mgo.Collection
-var pCol *mgo.Collection
-var phCol *mgo.Collection
-
-var pepper []byte
-
-var idgen *idgenerator
-
-var mailnotify *MailNotificationService
-
-func RegisterDatabase(s *mgo.Session, dbname string, cfg *Mailconfig) {
-	uCol = s.DB(dbname).C("user")
-	iCol = s.DB(dbname).C("item")
-	ihCol = s.DB(dbname).C("item_history")
-	pCol = s.DB(dbname).C("policy")
-	phCol = s.DB(dbname).C("policy_history")
-	idgen = NewIDGenerator(s.DB(dbname).C("counters"))
-	if cfg.Enabled {
-		mailnotify = NewMailNotificationService(s.DB(dbname).C("deferred"), cfg)
-	}
-}
-
-func ReadPepper(path string) {
-	if path == "" {
-		log.Panic("Pepperpath empty")
-	}
-	f, er := os.Open(path)
-	if er != nil {
-		err := er.(*os.PathError)
-		log.WithFields(log.Fields{"Path": err.Path, "Op": err.Op}).Debug(err.Err)
-		if err.Err.Error() == "no such file or directory" {
-			log.Warn("Pepper file not found - creating ...")
-			pepper = createPepper(path)
-			return
-		}
-		log.Fatal(err)
-	}
-	defer f.Close()
-	fi, er := f.Stat()
-	if er != nil {
-		log.Fatal(er)
-	}
-	if fi.Size() != PEPPER_SIZE {
-		log.WithFields(log.Fields{"File Size": fi.Size(), "Expected Size": PEPPER_SIZE}).Fatal("Invalid pepper length - your file may be corrupt. Check your disk for errors.")
-	}
-	pepper = make([]byte, PEPPER_SIZE)
-	bytes, er := f.Read(pepper)
-	if er != nil || bytes != PEPPER_SIZE {
-		log.WithFields(log.Fields{"Read": bytes, "Expected": PEPPER_SIZE}).Fatal(er)
-	}
-}
-
-func createPepper(path string) []byte {
-	res := make([]byte, PEPPER_SIZE)
-	b, err := rand.Read(res)
-	if err != nil || b != PEPPER_SIZE {
-		log.WithFields(log.Fields{"Read": b, "Expected": PEPPER_SIZE}).Fatal(err)
-	}
-	f, err := os.Create(path)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f.Close()
-	err = f.Chmod(0600)
-	if err != nil {
-		log.Fatal(err)
-	}
-	b, err = f.Write(res)
-	if err != nil || b != PEPPER_SIZE {
-		log.Fatal(err)
-	}
-	return res
-}
 
 func DebugLoggingFilter(rq *restful.Request, rs *restful.Response, ch *restful.FilterChain) {
 	id := uint32(mrand.Int31())
@@ -150,14 +70,6 @@ func DebugLoggingFilter(rq *restful.Request, rs *restful.Response, ch *restful.F
 		Debug()
 
 	ch.ProcessFilter(rq, rs)
-}
-
-func CloseIDGen() {
-	idgen.StopIDGenerator()
-}
-
-func CloseMailNotifier() {
-	mailnotify.Quit()
 }
 
 func returnsInternalServerError(b *restful.RouteBuilder) {

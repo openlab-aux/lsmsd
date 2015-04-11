@@ -17,7 +17,7 @@
  *    Authors: Stefan Luecke <glaxx@glaxx.net>
  */
 
-package backend
+package webservice
 
 import (
 	//	"database/sql"
@@ -25,97 +25,23 @@ import (
 	"github.com/emicklei/go-restful"
 	//"html/template"
 	//	"github.com/fatih/structs"
-	dmp "github.com/sergi/go-diff/diffmatchpatch"
-	"gopkg.in/mgo.v2/bson"
 	"net/http"
 	"strconv"
 	//"strings"
-	"time"
+	db "github.com/openlab-aux/lsmsd/database"
 )
 
-type Item struct {
-	ID          bson.ObjectId `bson:"_id,omitempty" json:"-"`
-	EID         uint64        `json:"Id"`
-	Name        string        `bson:",omitempty"`
-	Description string        `bson:",omitempty" description:"This string should be in Github Flavored Markdown"`
-	Contains    []uint64      `bson:",omitempty"`
-	Owner       string        `bson:",omitempty"`
-	Maintainer  string        `bson:",omitempty"`
-	Usage       string        `bson:",omitempty"`
-	Discard     string        `bson:",omitempty"`
+type ItemWebService struct {
+	d *db.ItemDBProvider
+	S *restful.WebService
+	a *BasicAuthService
 }
 
-func (i *Item) NewItemHistory(it *Item, user string) *ItemHistory {
-	res := new(ItemHistory)
-	res.Item = make(map[string]interface{})
-	res.Item["eid"] = i.EID
-	res.User = user
+func NewItemWebService(d *db.ItemDBProvider, a *BasicAuthService) *ItemWebService {
+	res := new(ItemWebService)
+	res.d = d
+	res.a = a
 
-	if it == nil {
-		res.Item["deleted"] = true
-		return res
-	}
-	//res.Item["_id"] = i.ID
-	if i.Name != it.Name {
-		res.Item["name"] = it.Name
-	}
-	if i.Description != it.Description {
-		d := dmp.New()
-		d.DiffTimeout = 200 * time.Millisecond
-		res.Item["description"] = d.DiffMain(i.Description, it.Description, true)
-	}
-	condiff := uint64Diff(i.Contains, it.Contains)
-	if len(condiff) > 0 {
-		res.Item["contains"] = condiff
-	}
-	if i.Owner != it.Owner {
-		res.Item["owner"] = it.Owner
-	}
-	if i.Maintainer != it.Maintainer {
-		res.Item["maintainer"] = it.Maintainer
-	}
-	if i.Usage != it.Usage {
-		res.Item["usage"] = it.Usage
-	}
-	if i.Discard != it.Discard {
-		res.Item["discard"] = it.Discard
-	}
-	return res
-}
-
-func uint64Diff(u1, u2 []uint64) map[string]dmp.Operation {
-	// mgo.bson does only support strings as keys
-	res := make(map[string]dmp.Operation)
-	for i := 0; i != len(u1); i++ {
-		if !uint64Contains(u2, u1[i]) {
-			res[strconv.FormatUint(u1[i], 10)] = dmp.DiffDelete
-		}
-	}
-	for i := 0; i != len(u2); i++ {
-		if !uint64Contains(u1, u2[i]) {
-			res[strconv.FormatUint(u2[i], 10)] = dmp.DiffInsert
-		}
-	}
-	return res
-}
-
-func uint64Contains(sl []uint64, u uint64) bool {
-	for i := 0; i != len(sl); i++ {
-		if sl[i] == u {
-			return true
-		}
-	}
-	return false
-}
-
-type ItemHistory struct {
-	ID        bson.ObjectId `bson:"_id,omitempty" json:"-"`
-	Timestamp time.Time     `bson:"-" json:",omitempty"`
-	User      string
-	Item      map[string]interface{}
-}
-
-func NewItemService() *restful.WebService {
 	service := new(restful.WebService)
 	service.
 		Path("/item").
@@ -128,48 +54,50 @@ func NewItemService() *restful.WebService {
 		Param(restful.PathParameter("id", "Item ID")).
 		Doc("Returns a single item identified by its ID").
 		//Returns(http.StatusOK, "Item request successful", Item{}).
-		To(GetItemById).
-		Writes(Item{}).
+		To(res.GetItemById).
+		Writes(db.Item{}).
 		Do(returnsInternalServerError, returnsNotFound, returnsBadRequest))
 
 	service.Route(service.GET("/{id}/log").
 		Param(restful.PathParameter("id", "Item ID")).
 		Doc("Returns the items changelog").
-		To(GetItemLog).
-		Writes(ItemHistory{}).
+		To(res.GetItemLog).
+		Writes(db.ItemHistory{}).
 		Do(returnsInternalServerError, returnsNotFound, returnsBadRequest))
 
 	service.Route(service.GET("").
 		Doc("List all available items (this may be replaced by a paginated version)").
-		To(ListItem).
-		Writes([]Item{}).
+		To(res.ListItem).
+		Writes([]db.Item{}).
 		Do(returnsInternalServerError))
 
 	service.Route(service.PUT("").
-		Filter(basicAuthFilter).
+		Filter(res.a.Auth).
 		Doc("Update a item.").
-		To(UpdateItem).
-		Reads(Item{}).
+		To(res.UpdateItem).
+		Reads(db.Item{}).
 		Do(returnsInternalServerError, returnsNotFound, returnsUpdateSuccessful, returnsBadRequest))
 
 	service.Route(service.POST("").
-		Filter(basicAuthFilter).
+		Filter(res.a.Auth).
 		Doc("Insert a item into the database").
-		To(CreateItem).
-		Reads(Item{}).
+		To(res.CreateItem).
+		Reads(db.Item{}).
 		Returns(http.StatusOK, "Insert successful", "/item/{id}").
 		Do(returnsInternalServerError, returnsBadRequest))
 
 	service.Route(service.DELETE("/{id}").
-		Filter(basicAuthFilter).
+		Filter(res.a.Auth).
 		Param(restful.PathParameter("id", "Item ID")).
 		Doc("Delete a item").
-		To(DeleteItem).
+		To(res.DeleteItem).
 		Do(returnsInternalServerError, returnsNotFound, returnsDeleteSuccessful, returnsBadRequest))
-	return service
+
+	res.S = service
+	return res
 }
 
-func GetItemById(request *restful.Request, response *restful.Response) {
+func (s *ItemWebService) GetItemById(request *restful.Request, response *restful.Response) {
 	sid := request.PathParameter("id")
 	log.WithFields(log.Fields{"Requested ID": sid, "Path": request.SelectedRoutePath()}).Debug("Got Request")
 	id, err := strconv.ParseUint(sid, 10, 64)
@@ -179,7 +107,7 @@ func GetItemById(request *restful.Request, response *restful.Response) {
 			Info(ERROR_INVALID_ID)
 		return
 	}
-	itm, err := getItemById(id)
+	itm, err := s.d.GetItemById(id)
 	if err != nil {
 		response.WriteErrorString(http.StatusNotFound, ERROR_INVALID_ID)
 		log.WithFields(log.Fields{"Error Msg": err}).
@@ -189,13 +117,7 @@ func GetItemById(request *restful.Request, response *restful.Response) {
 	response.WriteEntity(itm)
 }
 
-func getItemById(id uint64) (Item, error) {
-	res := Item{}
-	err := iCol.Find(bson.M{"eid": id}).One(&res)
-	return res, err
-}
-
-func GetItemLog(request *restful.Request, response *restful.Response) {
+func (s *ItemWebService) GetItemLog(request *restful.Request, response *restful.Response) {
 	sid := request.PathParameter("id")
 	id, err := strconv.ParseUint(sid, 10, 64)
 	if err != nil {
@@ -203,7 +125,7 @@ func GetItemLog(request *restful.Request, response *restful.Response) {
 		log.Info(err)
 		return
 	}
-	history, err := getItemLog(id)
+	history, err := s.d.GetItemLog(id)
 	if err != nil {
 		response.WriteErrorString(http.StatusNotFound, ERROR_INVALID_ID)
 		log.Info(err)
@@ -212,17 +134,8 @@ func GetItemLog(request *restful.Request, response *restful.Response) {
 	response.WriteEntity(history)
 }
 
-func getItemLog(id uint64) ([]ItemHistory, error) {
-	res := make([]ItemHistory, 0)
-	err := ihCol.Find(bson.M{"item.eid": id}).All(&res)
-	for i := 0; i != len(res); i++ {
-		res[i].Timestamp = res[i].ID.Time()
-	}
-	return res, err
-}
-
-func CreateItem(request *restful.Request, response *restful.Response) {
-	itm := new(Item)
+func (s *ItemWebService) CreateItem(request *restful.Request, response *restful.Response) {
+	itm := new(db.Item)
 	err := request.ReadEntity(itm)
 	if err != nil {
 		response.WriteErrorString(http.StatusBadRequest, ERROR_INVALID_INPUT)
@@ -230,7 +143,7 @@ func CreateItem(request *restful.Request, response *restful.Response) {
 		return
 	}
 
-	id, err := createItem(itm)
+	id, err := s.d.CreateItem(itm)
 	if err != nil {
 		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
 		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_INTERNAL)
@@ -239,15 +152,8 @@ func CreateItem(request *restful.Request, response *restful.Response) {
 	response.WriteEntity("/item/" + strconv.FormatUint(id, 10))
 }
 
-func createItem(itm *Item) (uint64, error) {
-	itm.EID = idgen.GenerateID()
-	log.WithFields(log.Fields{"ID": itm.EID}).Debug("Generated ID")
-	err := iCol.Insert(itm)
-	return itm.EID, err
-}
-
-func ListItem(request *restful.Request, response *restful.Response) {
-	itm, err := listItem()
+func (s *ItemWebService) ListItem(request *restful.Request, response *restful.Response) {
+	itm, err := s.d.ListItem()
 	if err != nil {
 		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
 		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_INTERNAL)
@@ -256,21 +162,15 @@ func ListItem(request *restful.Request, response *restful.Response) {
 	response.WriteEntity(itm)
 }
 
-func listItem() ([]Item, error) {
-	itm := make([]Item, 0)
-	err := iCol.Find(nil).All(&itm)
-	return itm, err
-}
-
-func UpdateItem(request *restful.Request, response *restful.Response) {
-	itm := new(Item)
+func (s *ItemWebService) UpdateItem(request *restful.Request, response *restful.Response) {
+	itm := new(db.Item)
 	err := request.ReadEntity(itm)
 	if err != nil {
 		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
 		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_INTERNAL)
 		return
 	}
-	i, err := getItemById(itm.EID)
+	i, err := s.d.GetItemById(itm.EID)
 	if err != nil {
 		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
 		log.Warn(err)
@@ -278,7 +178,7 @@ func UpdateItem(request *restful.Request, response *restful.Response) {
 	}
 	h := i.NewItemHistory(itm, request.Attribute("User").(string))
 
-	err = updateItem(itm, h)
+	err = s.d.UpdateItem(itm, h)
 	if err != nil {
 		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
 		log.Warn(err)
@@ -288,30 +188,7 @@ func UpdateItem(request *restful.Request, response *restful.Response) {
 	return
 }
 
-func updateItem(itm *Item, ih *ItemHistory) error {
-	err := ihCol.Insert(ih)
-	if err != nil {
-		return err
-	}
-	return iCol.Update(bson.M{"eid": itm.EID}, itm)
-}
-
-func checkItemExistance(itm *Item) bool {
-	temp := Item{}
-	err := iCol.Find(bson.M{"eid": itm.EID}).One(&temp)
-	if err != nil {
-		if err.Error() == "not found" {
-			return false
-		} else {
-			log.WithFields(log.Fields{"Err": err}).
-				Debug("TODO: check more error codes here")
-			return true
-		}
-	}
-	return true
-}
-
-func DeleteItem(request *restful.Request, response *restful.Response) {
+func (s *ItemWebService) DeleteItem(request *restful.Request, response *restful.Response) {
 	sid := request.PathParameter("id")
 	id, err := strconv.ParseUint(sid, 10, 64)
 	if err != nil {
@@ -321,7 +198,7 @@ func DeleteItem(request *restful.Request, response *restful.Response) {
 		return
 	}
 
-	i, err := getItemById(id)
+	i, err := s.d.GetItemById(id)
 	if err != nil {
 		if err.Error() == "not found" {
 			log.WithFields(log.Fields{"ID": id}).Info(ERROR_INVALID_ID)
@@ -334,19 +211,11 @@ func DeleteItem(request *restful.Request, response *restful.Response) {
 	}
 
 	h := i.NewItemHistory(nil, request.Attribute("User").(string))
-	err = deleteItem(&i, h)
+	err = s.d.DeleteItem(&i, h)
 	if err != nil {
 		log.Warn(err)
 		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
 		return
 	}
 	response.WriteEntity(true)
-}
-
-func deleteItem(itm *Item, ih *ItemHistory) error {
-	err := ihCol.Insert(ih)
-	if err != nil {
-		return err
-	}
-	return iCol.Remove(bson.M{"eid": itm.EID})
 }

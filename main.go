@@ -24,7 +24,10 @@ import (
 	//	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
-	"github.com/openlab-aux/lsmsd/backend"
+	db "github.com/openlab-aux/lsmsd/database"
+	"github.com/openlab-aux/lsmsd/notification"
+	"github.com/openlab-aux/lsmsd/webservice"
+
 	"net/http"
 	//	"time"
 	"code.google.com/p/gcfg"
@@ -46,7 +49,7 @@ type Config struct {
 		Server string
 		DB     string
 	}
-	Mail    backend.Mailconfig
+	Mail    notification.Mailconfig
 	Logging struct {
 		Level string
 	}
@@ -156,19 +159,21 @@ func main() {
 	log.Info("Connection successful")
 	defer s.Close()
 
-	backend.RegisterDatabase(s, cfg.Database.DB, &cfg.Mail)
-	backend.ReadPepper(cfg.Crypto.Pepperfile)
-	defer backend.CloseIDGen()
-	if cfg.Mail.Enabled {
-		defer backend.CloseMailNotifier()
-	}
+	itemp := db.NewItemDBProvider(s, cfg.Database.DB)
+	polp := db.NewPolicyDBProvider(s, cfg.Database.DB)
+	userp := db.NewUserDBProvider(s, itemp, polp, cfg.Database.DB)
+	auth := webservice.NewBasicAuthService(userp)
+	iws := webservice.NewItemWebService(itemp, auth)
+	pws := webservice.NewPolicyService(polp, auth)
+	uws := webservice.NewUserService(userp, auth)
+
 	restful.DefaultContainer.Filter(restful.DefaultContainer.OPTIONSFilter)
-	restful.Add(backend.NewItemService())
-	restful.Add(backend.NewUserService())
-	restful.Add(backend.NewPolicyService())
+	restful.Add(iws.S)
+	restful.Add(pws.S)
+	restful.Add(uws.S)
 
 	if log.GetLevel() == log.DebugLevel {
-		restful.DefaultContainer.Filter(backend.DebugLoggingFilter)
+		restful.DefaultContainer.Filter(webservice.DebugLoggingFilter)
 	}
 
 	log.Debug(cfg)

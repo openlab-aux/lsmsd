@@ -17,7 +17,7 @@
  *    Authors: Stefan Luecke <glaxx@glaxx.net>
  */
 
-package backend
+package notification
 
 import (
 	"crypto/tls"

@@ -17,13 +17,73 @@
  *    Authors: Stefan Luecke <glaxx@glaxx.net>
  */
 
-package backend
+package database
 
 import (
 	"crypto/rand"
 	"crypto/sha512"
 	"errors"
+	log "github.com/Sirupsen/logrus"
+	"os"
 )
+
+const (
+	pepperSize = 64
+)
+
+var pepper []byte
+
+func ReadPepper(path string) {
+	if path == "" {
+		log.Panic("Pepperpath empty")
+	}
+	f, er := os.Open(path)
+	if er != nil {
+		err := er.(*os.PathError)
+		log.WithFields(log.Fields{"Path": err.Path, "Op": err.Op}).Debug(err.Err)
+		if err.Err.Error() == "no such file or directory" {
+			log.Warn("Pepper file not found - creating ...")
+			pepper = createPepper(path)
+			return
+		}
+		log.Fatal(err)
+	}
+	defer f.Close()
+	fi, er := f.Stat()
+	if er != nil {
+		log.Fatal(er)
+	}
+	if fi.Size() != pepperSize {
+		log.WithFields(log.Fields{"File Size": fi.Size(), "Expected Size": pepperSize}).Fatal("Invalid pepper length - your file may be corrupt. Check your disk for errors.")
+	}
+	pepper = make([]byte, pepperSize)
+	bytes, er := f.Read(pepper)
+	if er != nil || bytes != pepperSize {
+		log.WithFields(log.Fields{"Read": bytes, "Expected": pepperSize}).Fatal(er)
+	}
+}
+
+func createPepper(path string) []byte {
+	res := make([]byte, pepperSize)
+	b, err := rand.Read(res)
+	if err != nil || b != pepperSize {
+		log.WithFields(log.Fields{"Read": b, "Expected": pepperSize}).Fatal(err)
+	}
+	f, err := os.Create(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+	err = f.Chmod(0600)
+	if err != nil {
+		log.Fatal(err)
+	}
+	b, err = f.Write(res)
+	if err != nil || b != pepperSize {
+		log.Fatal(err)
+	}
+	return res
+}
 
 type Secret struct {
 	Password [sha512.Size]byte `json:"-"`

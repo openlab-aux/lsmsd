@@ -17,7 +17,7 @@
  *    Authors: Stefan Luecke <glaxx@glaxx.net>
  */
 
-package backend
+package database
 
 import (
 	log "github.com/Sirupsen/logrus"

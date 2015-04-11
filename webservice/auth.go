@@ -17,21 +17,32 @@
  *    Authors: Stefan Luecke <glaxx@glaxx.net>
  */
 
-package backend
+package webservice
 
 import (
 	//"crypto/sha512"
 	log "github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
 	//	"gopkg.in/mgo.v2/bson"
+	db "github.com/openlab-aux/lsmsd/database"
 	"net/http"
 )
 
-func basicAuthFilter(request *restful.Request, response *restful.Response, chain *restful.FilterChain) {
+type BasicAuthService struct {
+	d *db.UserDBProvider
+}
+
+func NewBasicAuthService(d *db.UserDBProvider) *BasicAuthService {
+	res := new(BasicAuthService)
+	res.d = d
+	return res
+}
+
+func (s *BasicAuthService) Auth(request *restful.Request, response *restful.Response, chain *restful.FilterChain) {
 	u, p, ok := request.Request.BasicAuth()
 	if !ok {
 	}
-	usr, err := getUserByName(u)
+	usr, err := s.d.GetUserByName(u)
 	if err != nil || !ok {
 		log.WithFields(log.Fields{"User": u}).Warn("Failed login attempt")
 		response.AddHeader("WWW-Authenticate", "Basic realm=\""+request.SelectedRoutePath()+"\"")

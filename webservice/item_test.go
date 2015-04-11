@@ -17,27 +17,53 @@
  *    Authors: Stefan Luecke <glaxx@glaxx.net>
  */
 
-package backend
+package webservice
 
 import (
-	"encoding/json"
+	//	"encoding/json"
 	"github.com/emicklei/go-restful"
-	dmp "github.com/sergi/go-diff/diffmatchpatch"
-	"math/rand"
+	db "github.com/openlab-aux/lsmsd/database"
+	//	dmp "github.com/sergi/go-diff/diffmatchpatch"
+	"gopkg.in/mgo.v2"
+	//	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"testing"
 )
 
-func Test_GetItemByIdReturns400InvalidID(t *testing.T) {
-	cont := newTestContainer()
-	s, err := startTestDB()
+func newTestContainer(t testing.TB) (*mgo.Session, *restful.Container, *db.ItemDBProvider) {
+	s, err := mgo.Dial("localhost")
 	if err != nil {
-		t.Error("failed" + err.Error())
+		t.Error(err.Error())
 	}
-	defer flushAndCloseTestDB(s, t)
+	cont := restful.NewContainer()
 
+	itemp := db.NewItemDBProvider(s, "lsmsd_test")
+	polp := db.NewPolicyDBProvider(s, "lsmsd_test")
+	userp := db.NewUserDBProvider(s, itemp, polp, "lsmsd_test")
+	auth := NewBasicAuthService(userp)
+	iws := NewItemWebService(itemp, auth)
+	pws := NewPolicyService(polp, auth)
+	uws := NewUserService(userp, auth)
+	cont.Add(iws.S)
+	cont.Add(pws.S)
+	cont.Add(uws.S)
+	return s, cont, itemp
+}
+
+func flushDB(t testing.TB, s *mgo.Session, itm *db.ItemDBProvider) {
+	itm.Stop()
+	err := s.DB("lsmsd_test").DropDatabase()
+	if err != nil {
+		t.Error("failed to clean up: " + err.Error())
+	}
+	s.Close()
+}
+
+func Test_GetItemByIdReturns400InvalidID(t *testing.T) {
+	s, cont, it := newTestContainer(t)
+	defer flushDB(t, s, it)
 	httpRequest, _ := http.NewRequest("GET", "/item/232323", nil)
 	httpRequest.Header.Set("Content-Type", restful.MIME_JSON)
 	httpWriter := httptest.NewRecorder()
@@ -49,12 +75,8 @@ func Test_GetItemByIdReturns400InvalidID(t *testing.T) {
 }
 
 func Test_GetItemByIdReturns500BadRequest(t *testing.T) {
-	cont := newTestContainer()
-	s, err := startTestDB()
-	if err != nil {
-		t.Error("failed: " + err.Error())
-	}
-	defer flushAndCloseTestDB(s, t)
+	s, cont, it := newTestContainer(t)
+	defer flushDB(t, s, it)
 
 	req, _ := http.NewRequest("GET", "/item/ſḥịŧ", nil)
 	req.Header.Set("Content-Type", restful.MIME_JSON)
@@ -66,15 +88,11 @@ func Test_GetItemByIdReturns500BadRequest(t *testing.T) {
 	}
 }
 
-func TestGetItemById(t *testing.T) {
-	cont := newTestContainer()
-	s, err := startTestDB()
-	if err != nil {
-		t.Error("failed: " + err.Error())
-	}
-	defer flushAndCloseTestDB(s, t)
-	itm := Item{EID: 23, Name: "testitem", Description: "testdesc", Contains: []uint64{2, 3}, Owner: "testuser", Maintainer: "test", Usage: "test", Discard: "disc"}
-	id, err := createItem(&itm)
+/*func TestGetItemById(t *testing.T) {
+	s, cont := newTestContainer(t)
+	defer flushDB(t, s)
+	itm := db.Item{EID: 23, Name: "testitem", Description: "testdesc", Contains: []uint64{2, 3}, Owner: "testuser", Maintainer: "test", Usage: "test", Discard: "disc"}
+	id, err := reateItem(&itm)
 	if err != nil {
 		t.Error("failed: " + err.Error())
 	}
@@ -122,41 +140,4 @@ func TestGetItemById(t *testing.T) {
 	if itm.Discard != jitm.Discard {
 		t.Error()
 	}
-}
-
-func Test_uint64Contains(t *testing.T) {
-	A := []uint64{1, 2}
-	B := []uint64{1, 3}
-	if !uint64Contains(A, B[0]) || !uint64Contains(B, A[0]) {
-		t.Error("failed")
-	}
-	if uint64Contains(A, B[1]) || uint64Contains(B, A[1]) {
-		t.Error("failed")
-	}
-}
-
-func Test_uint64Diff(t *testing.T) {
-	A, B := []uint64{1, 2}, []uint64{1, 3}
-	C := uint64Diff(A, B)
-	_, ok := C["1"]
-	if ok {
-		t.Error("failed")
-	}
-	if C["2"] != dmp.DiffDelete {
-		t.Error("failed")
-	}
-	if C["3"] != dmp.DiffInsert {
-		t.Error("failed")
-	}
-}
-
-func Benchmark_uint64Contains(b *testing.B) {
-	A := make([]uint64, 10000)
-	for i := 0; i != len(A); i++ {
-		A[i] = uint64(rand.Int63())
-	}
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		uint64Contains(A, uint64(rand.Int63()))
-	}
-}
+}*/

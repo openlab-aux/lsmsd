@@ -17,7 +17,7 @@
  *    Authors: Stefan Luecke <glaxx@glaxx.net>
  */
 
-package backend
+package webservice
 
 import (
 	log "github.com/Sirupsen/logrus"
@@ -26,43 +26,20 @@ import (
 	"net/http"
 	//"strconv"
 	//"strings"
-	dmp "github.com/sergi/go-diff/diffmatchpatch"
-	"gopkg.in/mgo.v2/bson"
-	"time"
+	db "github.com/openlab-aux/lsmsd/database"
 )
 
-type Policy struct {
-	ID          bson.ObjectId `bson:"_id,omitempty" json:"-"`
-	Name        string
-	Description string
+type PolicyWebService struct {
+	d *db.PolicyDBProvider
+	S *restful.WebService
+	a *BasicAuthService
 }
 
-type PolicyHistory struct {
-	ID        bson.ObjectId `bson:"_id,omitempty" json:"-"`
-	Timestamp time.Time     `bson:"-" json:",omitempty"`
-	User      string
-	Policy    map[string]interface{}
-}
+func NewPolicyService(d *db.PolicyDBProvider, a *BasicAuthService) *PolicyWebService {
+	res := new(PolicyWebService)
+	res.d = d
+	res.a = a
 
-func (p *Policy) NewPolicyHistory(po *Policy, user string) *PolicyHistory {
-	res := new(PolicyHistory)
-	res.Policy = make(map[string]interface{})
-	res.User = user
-	res.Policy["name"] = p.Name
-
-	if po == nil {
-		res.Policy["deleted"] = true
-		return res
-	}
-	if p.Description != po.Description {
-		d := dmp.New()
-		d.DiffTimeout = 200 * time.Millisecond
-		res.Policy["description"] = d.DiffMain(p.Description, po.Description, true)
-	}
-	return res
-}
-
-func NewPolicyService() *restful.WebService {
 	service := new(restful.WebService)
 	service.
 		Path("/policy").
@@ -74,51 +51,52 @@ func NewPolicyService() *restful.WebService {
 	service.Route(service.GET("/{name}").
 		Param(restful.PathParameter("name", "Policy Name")).
 		Doc("Returns a single policy identified by its name").
-		To(GetPolicyByName).
-		Writes(Policy{}).
+		To(res.GetPolicyByName).
+		Writes(db.Policy{}).
 		Do(returnsInternalServerError, returnsNotFound, returnsBadRequest))
 
 	service.Route(service.GET("/{name}/log").
 		Param(restful.PathParameter("name", "Policy Name")).
 		Doc("Returns the policys changelog").
-		To(GetPolicyLog).
-		Writes(PolicyHistory{}).
+		To(res.GetPolicyLog).
+		Writes(db.PolicyHistory{}).
 		Do(returnsInternalServerError, returnsNotFound, returnsBadRequest))
 
 	service.Route(service.GET("").
 		Doc("List all available policys (this may be replaced by a paginated version)").
-		To(ListPolicy).
-		Writes([]Policy{}).
+		To(res.ListPolicy).
+		Writes([]db.Policy{}).
 		Do(returnsInternalServerError))
 
 	service.Route(service.PUT("").
-		Filter(basicAuthFilter).
+		Filter(res.a.Auth).
 		Doc("Update a policy").
-		To(UpdatePolicy).
-		Reads(Policy{}).
+		To(res.UpdatePolicy).
+		Reads(db.Policy{}).
 		Do(returnsInternalServerError, returnsNotFound, returnsUpdateSuccessful, returnsBadRequest))
 
 	service.Route(service.POST("").
-		Filter(basicAuthFilter).
+		Filter(res.a.Auth).
 		Doc("Insert a policy").
-		To(CreatePolicy).
-		Reads(Policy{}).
+		To(res.CreatePolicy).
+		Reads(db.Policy{}).
 		Returns(http.StatusOK, "Insert successful", "/policy/{name").
 		Do(returnsInternalServerError, returnsBadRequest))
 
 	service.Route(service.DELETE("/{name}").
-		Filter(basicAuthFilter).
+		Filter(res.a.Auth).
 		Param(restful.PathParameter("name", "Policy Name")).
 		Doc("Delete a policy").
-		To(DeletePolicy).
+		To(res.DeletePolicy).
 		Do(returnsInternalServerError, returnsNotFound, returnsDeleteSuccessful, returnsBadRequest))
-	return service
+	res.S = service
+	return res
 }
 
-func GetPolicyByName(request *restful.Request, response *restful.Response) {
+func (p *PolicyWebService) GetPolicyByName(request *restful.Request, response *restful.Response) {
 	log.WithFields(log.Fields{"Path": request.SelectedRoutePath()}).Debug("Got Request")
 	name := request.PathParameter("name")
-	pol, err := getPolicyByName(name)
+	pol, err := p.d.GetPolicyByName(name)
 	if err != nil {
 		response.WriteErrorString(http.StatusNotFound, ERROR_INVALID_ID)
 		log.WithFields(log.Fields{"Error Msg": err}).
@@ -128,15 +106,9 @@ func GetPolicyByName(request *restful.Request, response *restful.Response) {
 	response.WriteEntity(pol)
 }
 
-func getPolicyByName(name string) (Policy, error) {
-	res := Policy{}
-	err := pCol.Find(bson.M{"name": name}).One(&res)
-	return res, err
-}
-
-func GetPolicyLog(request *restful.Request, response *restful.Response) {
+func (p *PolicyWebService) GetPolicyLog(request *restful.Request, response *restful.Response) {
 	name := request.PathParameter("name")
-	history, err := getPolicyLog(name)
+	history, err := p.d.GetPolicyLog(name)
 	if err != nil {
 		response.WriteErrorString(http.StatusNotFound, ERROR_INVALID_ID)
 		log.Info(err)
@@ -145,17 +117,8 @@ func GetPolicyLog(request *restful.Request, response *restful.Response) {
 	response.WriteEntity(history)
 }
 
-func getPolicyLog(name string) ([]PolicyHistory, error) {
-	res := make([]PolicyHistory, 0)
-	err := phCol.Find(bson.M{"policy.name": name}).All(&res)
-	for i := 0; i != len(res); i++ {
-		res[i].Timestamp = res[i].ID.Time()
-	}
-	return res, err
-}
-
-func ListPolicy(request *restful.Request, response *restful.Response) {
-	pol, err := listPolicy()
+func (p *PolicyWebService) ListPolicy(request *restful.Request, response *restful.Response) {
+	pol, err := p.d.ListPolicy()
 	if err != nil {
 		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
 		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_INTERNAL)
@@ -164,29 +127,23 @@ func ListPolicy(request *restful.Request, response *restful.Response) {
 	response.WriteEntity(pol)
 }
 
-func listPolicy() ([]Policy, error) {
-	pol := make([]Policy, 0)
-	err := pCol.Find(nil).All(&pol)
-	return pol, err
-}
-
-func UpdatePolicy(request *restful.Request, response *restful.Response) {
-	pol := new(Policy)
+func (p *PolicyWebService) UpdatePolicy(request *restful.Request, response *restful.Response) {
+	pol := new(db.Policy)
 	err := request.ReadEntity(pol)
 	if err != nil {
 		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
 		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_INTERNAL)
 		return
 	}
-	p, err := getPolicyByName(pol.Name)
+	po, err := p.d.GetPolicyByName(pol.Name)
 	if err != nil {
 		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
 		log.Warn(err)
 		return
 	}
-	h := p.NewPolicyHistory(pol, request.Attribute("User").(string))
+	h := po.NewPolicyHistory(pol, request.Attribute("User").(string))
 
-	err = updatePolicy(pol, h)
+	err = p.d.UpdatePolicy(pol, h)
 	if err != nil {
 		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
 		log.Warn(err)
@@ -195,31 +152,8 @@ func UpdatePolicy(request *restful.Request, response *restful.Response) {
 	response.WriteEntity(true)
 }
 
-func updatePolicy(pol *Policy, ph *PolicyHistory) error {
-	err := phCol.Insert(ph)
-	if err != nil {
-		return err
-	}
-	return pCol.Update(bson.M{"name": pol.Name}, pol)
-}
-
-func checkPolicyExistance(pol *Policy) bool {
-	temp := Policy{}
-	err := pCol.Find(bson.M{"name": pol.Name}).One(&temp)
-	if err != nil {
-		if err.Error() == "not found" {
-			return false
-		} else {
-			log.WithFields(log.Fields{"Err": err}).
-				Debug("TODO: check more error codes here")
-			return true
-		}
-	}
-	return true
-}
-
-func CreatePolicy(request *restful.Request, response *restful.Response) {
-	pol := new(Policy)
+func (p *PolicyWebService) CreatePolicy(request *restful.Request, response *restful.Response) {
+	pol := new(db.Policy)
 	err := request.ReadEntity(pol)
 	if err != nil {
 		response.WriteErrorString(http.StatusBadRequest, ERROR_INVALID_INPUT)
@@ -227,14 +161,14 @@ func CreatePolicy(request *restful.Request, response *restful.Response) {
 		return
 	}
 
-	ex := checkPolicyExistance(pol)
+	ex := p.d.CheckPolicyExistance(pol)
 
 	if ex {
 		response.WriteErrorString(http.StatusUnauthorized, "This Policy does already exist")
 		return
 	}
 
-	err = createPolicy(pol)
+	err = p.d.CreatePolicy(pol)
 	if err != nil {
 		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
 		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_INTERNAL)
@@ -244,13 +178,9 @@ func CreatePolicy(request *restful.Request, response *restful.Response) {
 	response.WriteEntity("/policy/" + pol.Name)
 }
 
-func createPolicy(pol *Policy) error {
-	return pCol.Insert(pol)
-}
-
-func DeletePolicy(request *restful.Request, response *restful.Response) {
+func (p *PolicyWebService) DeletePolicy(request *restful.Request, response *restful.Response) {
 	name := request.PathParameter("name")
-	p, err := getPolicyByName(name)
+	po, err := p.d.GetPolicyByName(name)
 	if err != nil {
 		if err.Error() == "not found" {
 			log.Info(err)
@@ -262,20 +192,12 @@ func DeletePolicy(request *restful.Request, response *restful.Response) {
 		return
 	}
 
-	h := p.NewPolicyHistory(nil, request.Attribute("User").(string))
-	err = deletePolicy(&p, h)
+	h := po.NewPolicyHistory(nil, request.Attribute("User").(string))
+	err = p.d.DeletePolicy(&po, h)
 	if err != nil {
 		log.WithFields(log.Fields{"Error Msg": err}).Info(ERROR_INTERNAL)
 		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
 		return
 	}
 	response.WriteEntity(true)
-}
-
-func deletePolicy(p *Policy, ph *PolicyHistory) error {
-	err := phCol.Insert(ph)
-	if err != nil {
-		return err
-	}
-	return pCol.Remove(bson.M{"name": p.Name})
 }
