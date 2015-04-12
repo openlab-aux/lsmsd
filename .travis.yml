@@ -10,7 +10,7 @@ install:
     - go get -v -t ./...
     - export PATH=$PATH:$HOME/gopath/bin
 
-script: ginkgo -r --randomizeAllSpecs --randomizeSuites --failOnPending --cover --trace --compilers=2
+script: ginkgo -r --randomizeAllSpecs --randomizeSuites --failOnPending --trace --compilers=2
 
 services: mongodb
 
