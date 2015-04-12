@@ -58,6 +58,11 @@ func NewItemWebService(d *db.ItemDBProvider, a *BasicAuthService) *ItemWebServic
 		Writes(db.Item{}).
 		Do(returnsInternalServerError, returnsNotFound, returnsBadRequest))
 
+	service.Route(service.GET("/coffee").
+		Doc("Obviously not an easteregg. Go away. Leave me alone.").
+		To(res.NotAnEasterEgg).
+		Returns(http.StatusTeapot, "There is no coffee", nil))
+
 	service.Route(service.GET("/{id}/log").
 		Param(restful.PathParameter("id", "Item ID")).
 		Doc("Returns the items changelog").
@@ -218,4 +223,9 @@ func (s *ItemWebService) DeleteItem(request *restful.Request, response *restful.
 		return
 	}
 	response.WriteEntity(true)
+}
+
+func (s *ItemWebService) NotAnEasterEgg(req *restful.Request, res *restful.Response) {
+	res.WriteErrorString(http.StatusTeapot, "Try some mate tea")
+	return
 }
