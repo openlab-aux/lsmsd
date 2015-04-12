@@ -9,6 +9,7 @@ import (
 	"github.com/openlab-aux/lsmsd/webservice"
 	"gopkg.in/mgo.v2"
 	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -100,9 +101,18 @@ func populateUserDB(usr *db.UserDBProvider) {
 
 func flushDB(s *mgo.Session, itm *db.ItemDBProvider) {
 	itm.Stop()
-	err := s.DB("lsmsd_test").DropDatabase()
+	coll, err := s.DB("lsmsd_test").CollectionNames()
 	if err != nil {
 		Fail("failed to clean up: " + err.Error())
+	}
+	for i := 0; i != len(coll); i++ {
+		if strings.Contains(coll[i], "system") {
+			continue
+		}
+		err := s.DB("lsmsd_test").C(coll[i]).DropCollection()
+		if err != nil {
+			Fail("failed to clean up: " + err.Error())
+		}
 	}
 	s.Close()
 }
