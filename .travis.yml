@@ -18,3 +18,8 @@ notifications:
   email:
     on_success: change
     on_failure: always
+
+  irc:
+    - "chat.freenode.net#lsms"
+    on_success: change
+    on_failure: always
