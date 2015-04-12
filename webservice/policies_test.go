@@ -170,6 +170,11 @@ var _ = Describe("Policies", func() {
 			req.Header.Set("Content-Type", restful.MIME_JSON)
 		})
 
+		AfterEach(func() {
+			body = nil
+			req = nil
+		})
+
 		Context("Without authentication", func() {
 			It("Should return 401 Unauthorized", func() {
 				cont.ServeHTTP(hw, req)
