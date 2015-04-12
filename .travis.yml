@@ -20,6 +20,7 @@ notifications:
     on_failure: always
 
   irc:
-    - "chat.freenode.net#lsms"
+    channels:
+      - "chat.freenode.net#lsms"
     on_success: change
     on_failure: always
