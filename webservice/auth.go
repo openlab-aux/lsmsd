@@ -54,7 +54,7 @@ func (s *BasicAuthService) Auth(request *restful.Request, response *restful.Resp
 	if pwcorrect {
 		log.Debug("User Authentication successful")
 	} else {
-		log.WithFields(log.Fields{"User": u}).Warn("Failed login attempt")
+		log.WithFields(log.Fields{"User": u}).Warn("Failed login attempt, incorrect password")
 		response.AddHeader("WWW-Authenticate", "Basic realm=\""+request.SelectedRoutePath()+"\"")
 		response.WriteErrorString(http.StatusUnauthorized, "Username / Password incorrect")
 		return
