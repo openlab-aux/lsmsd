@@ -4,6 +4,14 @@ go:
   - 1.4
   - tip
 
+install:
+    - go get -v github.com/onsi/ginkgo/ginkgo
+    - go get -v github.com/onsi/gomega
+    - go get -v -t ./...
+    - export PATH=$PATH:$HOME/gopath/bin
+
+script: ginkgo -r --randomizeAllSpecs --randomizeSuites --failOnPending --cover --trace --compilers=2
+
 services: mongodb
 
 notifications:
