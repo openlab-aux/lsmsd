@@ -87,6 +87,7 @@ func NewUserService(d *db.UserDBProvider, a *BasicAuthService) *UserWebService {
 		Param(restful.PathParameter("name", "User identifier")).
 		Doc("Delete a user").
 		To(res.DeleteUser).
+		Returns(http.StatusForbidden, "Request not allowed; You may only delete your own account", nil).
 		Do(returnsInternalServerError, returnsNotFound, returnsDeleteSuccessful, returnsBadRequest))
 	res.S = service
 	return res
@@ -198,6 +199,13 @@ func (p *UserWebService) CreateUser(request *restful.Request, response *restful.
 func (p *UserWebService) DeleteUser(request *restful.Request, response *restful.Response) {
 	name := request.PathParameter("name")
 	log.WithFields(log.Fields{"Name": name}).Info("Got user DELETE request")
+
+	if name != request.Attribute("User").(string) {
+		log.WithFields(log.Fields{"User": request.Attribute("User").(string), "attempted to delete": name}).Warn("Unauthorized deletion request")
+		response.WriteErrorString(http.StatusForbidden, "Request not allowed")
+		return
+	}
+
 	err := p.d.DeleteUser(name)
 	if err != nil {
 		log.WithFields(log.Fields{"Error Msg": err}).Info(ERROR_INTERNAL)
