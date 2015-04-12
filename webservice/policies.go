@@ -108,6 +108,12 @@ func (p *PolicyWebService) GetPolicyByName(request *restful.Request, response *r
 
 func (p *PolicyWebService) GetPolicyLog(request *restful.Request, response *restful.Response) {
 	name := request.PathParameter("name")
+
+	if !p.d.CheckPolicyExistance(&db.Policy{Name: name}) {
+		response.WriteErrorString(http.StatusNotFound, ERROR_INVALID_ID)
+		return
+	}
+
 	history, err := p.d.GetPolicyLog(name)
 	if err != nil {
 		response.WriteErrorString(http.StatusNotFound, ERROR_INVALID_ID)
@@ -131,8 +137,8 @@ func (p *PolicyWebService) UpdatePolicy(request *restful.Request, response *rest
 	pol := new(db.Policy)
 	err := request.ReadEntity(pol)
 	if err != nil {
-		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
-		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_INTERNAL)
+		response.WriteErrorString(http.StatusBadRequest, ERROR_INVALID_ID)
+		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_INVALID_ID)
 		return
 	}
 	po, err := p.d.GetPolicyByName(pol.Name)
