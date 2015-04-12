@@ -97,7 +97,7 @@ func (p *UserWebService) GetUserByName(request *restful.Request, response *restf
 	name := request.PathParameter("name")
 	user, err := p.d.GetUserByName(name)
 	if err != nil {
-		response.WriteErrorString(http.StatusBadRequest, ERROR_INVALID_ID)
+		response.WriteErrorString(http.StatusNotFound, ERROR_INVALID_ID)
 		log.WithFields(log.Fields{"Error Msg": err}).
 			Info(ERROR_INVALID_ID)
 		return
