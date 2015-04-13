@@ -42,7 +42,7 @@ func NewPolicyService(d *db.PolicyDBProvider, a *BasicAuthService) *PolicyWebSer
 
 	service := new(restful.WebService)
 	service.
-		Path("/policy").
+		Path("/policies").
 		Doc("Policy related services").
 		ApiVersion("0.1").
 		Consumes(restful.MIME_JSON).
@@ -80,7 +80,7 @@ func NewPolicyService(d *db.PolicyDBProvider, a *BasicAuthService) *PolicyWebSer
 		Doc("Insert a policy").
 		To(res.CreatePolicy).
 		Reads(db.Policy{}).
-		Returns(http.StatusOK, "Insert successful", "/policy/{name").
+		Returns(http.StatusOK, "Insert successful", "/policies/{name").
 		Do(returnsInternalServerError, returnsBadRequest))
 
 	service.Route(service.DELETE("/{name}").
@@ -176,7 +176,7 @@ func (p *PolicyWebService) CreatePolicy(request *restful.Request, response *rest
 		return
 	}
 
-	response.WriteEntity("/policy/" + pol.Name)
+	response.WriteEntity("/policies/" + pol.Name)
 }
 
 func (p *PolicyWebService) DeletePolicy(request *restful.Request, response *restful.Response) {

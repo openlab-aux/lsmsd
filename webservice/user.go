@@ -41,7 +41,7 @@ func NewUserService(d *db.UserDBProvider, a *BasicAuthService) *UserWebService {
 	res.a = a
 	service := new(restful.WebService)
 	service.
-		Path("/user").
+		Path("/users").
 		Doc("User related services").
 		ApiVersion("0.1").
 		Consumes(restful.MIME_JSON).
@@ -78,7 +78,7 @@ func NewUserService(d *db.UserDBProvider, a *BasicAuthService) *UserWebService {
 		Doc("Register a new user").
 		To(res.CreateUser).
 		Reads(db.User{}).
-		Returns(http.StatusOK, "Insert successful", "/user/{name}").
+		Returns(http.StatusOK, "Insert successful", "/users/{name}").
 		Returns(http.StatusUnauthorized, "This username is not available", nil).
 		Do(returnsInternalServerError, returnsBadRequest))
 
@@ -198,7 +198,7 @@ func (p *UserWebService) CreateUser(request *restful.Request, response *restful.
 		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_INTERNAL)
 		return
 	}
-	response.WriteEntity("/user/" + usr.Name)
+	response.WriteEntity("/users/" + usr.Name)
 }
 
 func (p *UserWebService) DeleteUser(request *restful.Request, response *restful.Response) {

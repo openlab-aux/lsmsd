@@ -44,7 +44,7 @@ func NewItemWebService(d *db.ItemDBProvider, a *BasicAuthService) *ItemWebServic
 
 	service := new(restful.WebService)
 	service.
-		Path("/item").
+		Path("/items").
 		Doc("Item related services").
 		ApiVersion("0.1").
 		Consumes(restful.MIME_JSON).
@@ -88,7 +88,7 @@ func NewItemWebService(d *db.ItemDBProvider, a *BasicAuthService) *ItemWebServic
 		Doc("Insert a item into the database").
 		To(res.CreateItem).
 		Reads(db.Item{}).
-		Returns(http.StatusOK, "Insert successful", "/item/{id}").
+		Returns(http.StatusOK, "Insert successful", "/items/{id}").
 		Do(returnsInternalServerError, returnsBadRequest))
 
 	service.Route(service.DELETE("/{id}").
@@ -154,7 +154,7 @@ func (s *ItemWebService) CreateItem(request *restful.Request, response *restful.
 		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_INTERNAL)
 		return
 	}
-	response.WriteEntity("/item/" + strconv.FormatUint(id, 10))
+	response.WriteEntity("/items/" + strconv.FormatUint(id, 10))
 }
 
 func (s *ItemWebService) ListItem(request *restful.Request, response *restful.Response) {

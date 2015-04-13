@@ -56,7 +56,7 @@ var _ = Describe("User", func() {
 	Describe("Retrieve a user from the database", func() {
 		JustBeforeEach(func() {
 			rd := bytes.NewReader(body)
-			req, _ = http.NewRequest("GET", "/user/0", rd)
+			req, _ = http.NewRequest("GET", "/users/0", rd)
 			req.Header.Set("Content-Type", restful.MIME_JSON)
 		})
 
@@ -85,7 +85,7 @@ var _ = Describe("User", func() {
 		BeforeEach(func() {
 			populateUserDB(usr)
 			rd := bytes.NewReader(body)
-			req, _ = http.NewRequest("DELETE", "/user/0", rd)
+			req, _ = http.NewRequest("DELETE", "/users/0", rd)
 			req.Header.Set("Content-Type", restful.MIME_JSON)
 		})
 
@@ -130,7 +130,7 @@ var _ = Describe("User", func() {
 	Describe("Get a users log", func() {
 		BeforeEach(func() {
 			rd := bytes.NewReader(body)
-			req, _ = http.NewRequest("GET", "/user/0/log", rd)
+			req, _ = http.NewRequest("GET", "/users/0/log", rd)
 			req.Header.Set("Content-Type", restful.MIME_JSON)
 		})
 
@@ -158,7 +158,7 @@ var _ = Describe("User", func() {
 	Describe("List all user", func() {
 		BeforeEach(func() {
 			rd := bytes.NewReader(body)
-			req, _ = http.NewRequest("GET", "/user", rd)
+			req, _ = http.NewRequest("GET", "/users", rd)
 			req.Header.Set("Content-Type", restful.MIME_JSON)
 			populateUserDB(usr)
 		})
@@ -173,7 +173,7 @@ var _ = Describe("User", func() {
 	Describe("Update a user", func() {
 		JustBeforeEach(func() {
 			rd := bytes.NewReader(body)
-			req, _ = http.NewRequest("PUT", "/user", rd)
+			req, _ = http.NewRequest("PUT", "/users", rd)
 			req.Header.Set("Content-Type", restful.MIME_JSON)
 			populateUserDB(usr)
 		})
@@ -232,7 +232,7 @@ var _ = Describe("User", func() {
 	Describe("Register a user", func() {
 		JustBeforeEach(func() {
 			rd := bytes.NewReader(body)
-			req, _ = http.NewRequest("POST", "/user", rd)
+			req, _ = http.NewRequest("POST", "/users", rd)
 			req.Header.Set("Content-Type", restful.MIME_JSON)
 		})
 

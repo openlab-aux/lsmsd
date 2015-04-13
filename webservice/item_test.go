@@ -57,7 +57,7 @@ var _ = Describe("Item", func() {
 		Context("With an invalid identifier", func() {
 			JustBeforeEach(func() {
 				rd := bytes.NewReader(body)
-				req, _ = http.NewRequest("GET", "/item/ſhịŧ", rd)
+				req, _ = http.NewRequest("GET", "/items/ſhịŧ", rd)
 				req.Header.Set("Content-Type", restful.MIME_JSON)
 			})
 			It("should be a bad request", func() {
@@ -69,7 +69,7 @@ var _ = Describe("Item", func() {
 		Context("With valid identifier", func() {
 			JustBeforeEach(func() {
 				rd := bytes.NewReader(body)
-				req, _ = http.NewRequest("GET", "/item/1", rd)
+				req, _ = http.NewRequest("GET", "/items/1", rd)
 				req.Header.Set("Content-Type", restful.MIME_JSON)
 			})
 			Context("which does not exist", func() {
@@ -99,7 +99,7 @@ var _ = Describe("Item", func() {
 		Context("with valid id", func() {
 			BeforeEach(func() {
 				rd := bytes.NewReader(body)
-				req, _ = http.NewRequest("DELETE", "/item/1", rd)
+				req, _ = http.NewRequest("DELETE", "/items/1", rd)
 				req.Header.Set("Content-Type", restful.MIME_JSON)
 			})
 			Context("being authenticated", func() {
@@ -149,7 +149,7 @@ var _ = Describe("Item", func() {
 		Context("with invalid id", func() {
 			BeforeEach(func() {
 				rd := bytes.NewReader(body)
-				req, _ = http.NewRequest("DELETE", "/item/ſħịŧ", rd)
+				req, _ = http.NewRequest("DELETE", "/items/ſħịŧ", rd)
 				req.Header.Set("Content-Type", restful.MIME_JSON)
 			})
 
@@ -178,7 +178,7 @@ var _ = Describe("Item", func() {
 	Describe("Hear a joke", func() {
 		BeforeEach(func() {
 			rd := bytes.NewReader(body)
-			req, _ = http.NewRequest("GET", "/item/coffee", rd)
+			req, _ = http.NewRequest("GET", "/items/coffee", rd)
 			req.Header.Set("Content-Type", restful.MIME_JSON)
 		})
 
@@ -194,7 +194,7 @@ var _ = Describe("Item", func() {
 		Context("with invalid identifier", func() {
 			BeforeEach(func() {
 				rd := bytes.NewReader(body)
-				req, _ = http.NewRequest("GET", "/item/ſħịŧ/log", rd)
+				req, _ = http.NewRequest("GET", "/items/ſħịŧ/log", rd)
 				req.Header.Set("Content-Type", restful.MIME_JSON)
 			})
 
@@ -208,7 +208,7 @@ var _ = Describe("Item", func() {
 		Context("with valid identifier", func() {
 			BeforeEach(func() {
 				rd := bytes.NewReader(body)
-				req, _ = http.NewRequest("GET", "/item/1/log", rd)
+				req, _ = http.NewRequest("GET", "/items/1/log", rd)
 				req.Header.Set("Content-Type", restful.MIME_JSON)
 			})
 			PContext("which does not exist", func() {
@@ -235,7 +235,7 @@ var _ = Describe("Item", func() {
 	Describe("List all items", func() {
 		BeforeEach(func() {
 			rd := bytes.NewReader(body)
-			req, _ = http.NewRequest("GET", "/item", rd)
+			req, _ = http.NewRequest("GET", "/items", rd)
 			req.Header.Set("Content-Type", restful.MIME_JSON)
 			populateItemDB(itm)
 		})
@@ -250,7 +250,7 @@ var _ = Describe("Item", func() {
 	Describe("Update a item", func() {
 		JustBeforeEach(func() {
 			rd := bytes.NewReader(body)
-			req, _ = http.NewRequest("PUT", "/item", rd)
+			req, _ = http.NewRequest("PUT", "/items", rd)
 			req.Header.Set("Content-Type", restful.MIME_JSON)
 		})
 
@@ -315,7 +315,7 @@ var _ = Describe("Item", func() {
 	Describe("Insert a item", func() {
 		JustBeforeEach(func() {
 			rd := bytes.NewReader(body)
-			req, _ = http.NewRequest("POST", "/item", rd)
+			req, _ = http.NewRequest("POST", "/items", rd)
 			req.Header.Set("Content-Type", restful.MIME_JSON)
 			populateUserDB(usr)
 		})

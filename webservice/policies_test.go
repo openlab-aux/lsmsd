@@ -54,7 +54,7 @@ var _ = Describe("Policies", func() {
 	Describe("Retrieve a policy from the database", func() {
 		Context("Whith an invalid identifier", func() {
 			It("Should return a 404", func() {
-				req, _ := http.NewRequest("GET", "/policy/0", nil)
+				req, _ := http.NewRequest("GET", "/policies/0", nil)
 				req.Header.Set("Content-Type", restful.MIME_JSON)
 
 				cont.ServeHTTP(hw, req)
@@ -69,7 +69,7 @@ var _ = Describe("Policies", func() {
 			})
 
 			It("Shoud return a 200", func() {
-				req, _ := http.NewRequest("GET", "/policy/0", nil)
+				req, _ := http.NewRequest("GET", "/policies/0", nil)
 				req.Header.Set("Content-Type", restful.MIME_JSON)
 
 				cont.ServeHTTP(hw, req)
@@ -82,7 +82,7 @@ var _ = Describe("Policies", func() {
 	Describe("Delete a policy from the database", func() {
 		Context("Without authentication", func() {
 			It("Should return 401 Unauthorized", func() {
-				req, _ := http.NewRequest("DELETE", "/policy/0", nil)
+				req, _ := http.NewRequest("DELETE", "/policies/0", nil)
 				req.Header.Set("Content-Type", restful.MIME_JSON)
 
 				cont.ServeHTTP(hw, req)
@@ -97,7 +97,7 @@ var _ = Describe("Policies", func() {
 				populateUserDB(usr)
 			})
 			It("Should return 200", func() {
-				req, _ := http.NewRequest("DELETE", "/policy/0", nil)
+				req, _ := http.NewRequest("DELETE", "/policies/0", nil)
 				req.Header.Set("Content-Type", restful.MIME_JSON)
 				req.SetBasicAuth("0", "testpw")
 
@@ -107,7 +107,7 @@ var _ = Describe("Policies", func() {
 			})
 			Context("but with invalid id", func() {
 				It("Should return 404", func() {
-					req, _ := http.NewRequest("DELETE", "/policy/INVALID", nil)
+					req, _ := http.NewRequest("DELETE", "/policies/INVALID", nil)
 					req.Header.Set("Content-Type", restful.MIME_JSON)
 					req.SetBasicAuth("0", "testpw")
 
@@ -123,7 +123,7 @@ var _ = Describe("Policies", func() {
 	Describe("Get a policys log", func() {
 		PContext("With invalid identifier", func() {
 			It("Should return 404 Not Found", func() {
-				req, _ := http.NewRequest("GET", "/policy/INVALID/log", nil)
+				req, _ := http.NewRequest("GET", "/policies/INVALID/log", nil)
 				req.Header.Set("Content-Type", restful.MIME_JSON)
 
 				cont.ServeHTTP(hw, req)
@@ -137,7 +137,7 @@ var _ = Describe("Policies", func() {
 				populatePolicyDB(pol)
 			})
 			It("Should return 200 OK", func() {
-				req, _ := http.NewRequest("GET", "/policy/0/log", nil)
+				req, _ := http.NewRequest("GET", "/policies/0/log", nil)
 				req.Header.Set("Content-Type", restful.MIME_JSON)
 
 				cont.ServeHTTP(hw, req)
@@ -153,7 +153,7 @@ var _ = Describe("Policies", func() {
 		)
 
 		BeforeEach(func() {
-			req, _ = http.NewRequest("GET", "/policy", nil)
+			req, _ = http.NewRequest("GET", "/policies", nil)
 			req.Header.Set("Content-Type", restful.MIME_JSON)
 		})
 
@@ -185,7 +185,7 @@ var _ = Describe("Policies", func() {
 
 		JustBeforeEach(func() {
 			rd := bytes.NewReader(body)
-			req, _ = http.NewRequest("POST", "/policy", rd)
+			req, _ = http.NewRequest("POST", "/policies", rd)
 			req.Header.Set("Content-Type", restful.MIME_JSON)
 		})
 
@@ -247,7 +247,7 @@ var _ = Describe("Policies", func() {
 
 		JustBeforeEach(func() {
 			rd := bytes.NewReader(body)
-			req, _ = http.NewRequest("PUT", "/policy", rd)
+			req, _ = http.NewRequest("PUT", "/policies", rd)
 			req.Header.Set("Content-Type", restful.MIME_JSON)
 		})
 
