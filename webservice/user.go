@@ -184,7 +184,7 @@ func (p *UserWebService) CreateUser(request *restful.Request, response *restful.
 	ex := p.d.CheckUserExistance(usr)
 
 	if ex {
-		response.WriteErrorString(http.StatusUnauthorized, "This username is not available")
+		response.WriteErrorString(http.StatusForbidden, "This username is not available")
 		return
 	}
 	err = usr.Secret.SetPassword(usr.Password)
