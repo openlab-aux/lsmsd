@@ -102,7 +102,7 @@ var _ = Describe("Policies", func() {
 	})
 
 	Describe("Get a policys log", func() {
-		Context("With invalid identifier", func() {
+		PContext("With invalid identifier", func() {
 			It("Should return 404 Not Found", func() {
 				req, _ := http.NewRequest("GET", "/policy/INVALID/log", nil)
 				req.Header.Set("Content-Type", restful.MIME_JSON)
