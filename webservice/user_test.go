@@ -3,6 +3,7 @@ package webservice_test
 import (
 	//. "github.com/openlab-aux/lsmsd/webservice"
 	"bytes"
+	"encoding/json"
 	"github.com/emicklei/go-restful"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -105,5 +106,162 @@ var _ = Describe("User", func() {
 
 		})
 
+	})
+
+	Describe("Get a users log", func() {
+		BeforeEach(func() {
+			rd := bytes.NewReader(body)
+			req, _ = http.NewRequest("GET", "/user/0/log", rd)
+			req.Header.Set("Content-Type", restful.MIME_JSON)
+		})
+
+		PContext("with invalid identifier", func() {
+			It("Should return 404 not found", func() {
+				cont.ServeHTTP(hw, req)
+
+				Expect(hw.Code).To(Equal(http.StatusUnauthorized))
+			})
+		})
+
+		Context("with valid identifier", func() {
+			BeforeEach(func() {
+				populateUserDB(usr)
+			})
+
+			It("should return 200 OK", func() {
+				cont.ServeHTTP(hw, req)
+
+				Expect(hw.Code).To(Equal(http.StatusOK))
+			})
+		})
+	})
+
+	Describe("List all user", func() {
+		BeforeEach(func() {
+			rd := bytes.NewReader(body)
+			req, _ = http.NewRequest("GET", "/user", rd)
+			req.Header.Set("Content-Type", restful.MIME_JSON)
+			populateUserDB(usr)
+		})
+
+		It("Should return 200 OK", func() {
+			cont.ServeHTTP(hw, req)
+
+			Expect(hw.Code).To(Equal(http.StatusOK))
+		})
+	})
+
+	Describe("Update a user", func() {
+		JustBeforeEach(func() {
+			rd := bytes.NewReader(body)
+			req, _ = http.NewRequest("PUT", "/user", rd)
+			req.Header.Set("Content-Type", restful.MIME_JSON)
+			populateUserDB(usr)
+		})
+
+		Context("being unauthenticated", func() {
+			It("Should return 401 Unauthorized", func() {
+				cont.ServeHTTP(hw, req)
+				Expect(hw.Code).To(Equal(http.StatusUnauthorized))
+			})
+		})
+
+		Context("being auhtenticated", func() {
+			JustBeforeEach(func() {
+				req.SetBasicAuth("1", "testpw")
+			})
+
+			Context("without being the user", func() {
+				BeforeEach(func() {
+					test := db.User{Name: "0", EMail: "test@example.example.com"}
+					body, _ = json.Marshal(test)
+				})
+
+				It("should be forbidden", func() {
+					cont.ServeHTTP(hw, req)
+					Expect(hw.Code).To(Equal(http.StatusForbidden))
+				})
+			})
+
+			Context("being the user", func() {
+				BeforeEach(func() {
+					test := db.User{Name: "1", EMail: "test@example.example.com"}
+					body, _ = json.Marshal(test)
+				})
+
+				Context("with valid json", func() {
+					It("should return 200 OK", func() {
+						cont.ServeHTTP(hw, req)
+						Expect(hw.Code).To(Equal(http.StatusOK))
+					})
+				})
+
+				Context("with invalid json", func() {
+					BeforeEach(func() {
+						body = body[3:len(body)]
+					})
+
+					It("should return 400 Bad Request", func() {
+						cont.ServeHTTP(hw, req)
+						Expect(hw.Code).To(Equal(http.StatusBadRequest))
+					})
+				})
+			})
+		})
+	})
+
+	Describe("Register a user", func() {
+		JustBeforeEach(func() {
+			rd := bytes.NewReader(body)
+			req, _ = http.NewRequest("POST", "/user", rd)
+			req.Header.Set("Content-Type", restful.MIME_JSON)
+		})
+
+		Context("with already taken username", func() {
+			BeforeEach(func() {
+				populateUserDB(usr)
+				test := db.User{Name: "0", EMail: "someuser@example.com", Password: "testpw1"}
+				body, _ = json.Marshal(test)
+			})
+
+			It("should be forbidden", func() {
+				cont.ServeHTTP(hw, req)
+				Expect(hw.Code).To(Equal(http.StatusForbidden))
+			})
+		})
+
+		Context("with usable username", func() {
+			var (
+				user *db.User
+			)
+
+			BeforeEach(func() {
+				user = &db.User{Name: "0", EMail: "someuser@example.com"}
+			})
+			Context("without password", func() {
+				BeforeEach(func() {
+					body, _ = json.Marshal(user)
+				})
+
+				It("should be a bad request", func() {
+					cont.ServeHTTP(hw, req)
+
+					Expect(hw.Code).To(Equal(http.StatusBadRequest))
+				})
+			})
+
+			Context("with password", func() {
+				BeforeEach(func() {
+					user.Password = "testpw1"
+					body, _ = json.Marshal(user)
+				})
+
+				It("should be ok", func() {
+					cont.ServeHTTP(hw, req)
+
+					Expect(hw.Code).To(Equal(http.StatusOK))
+				})
+			})
+		})
 	})
 })
