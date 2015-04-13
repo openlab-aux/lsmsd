@@ -175,7 +175,7 @@ func (p *UserWebService) CreateUser(request *restful.Request, response *restful.
 	err := request.ReadEntity(usr)
 	log.WithFields(log.Fields{"Username": usr.Name}).Info("Attempted user registration")
 	log.Debug(usr)
-	if err != nil {
+	if err != nil || usr.Password == "" {
 		response.WriteErrorString(http.StatusBadRequest, ERROR_INVALID_INPUT)
 		log.WithFields(log.Fields{"Error Msg": err}).Info(ERROR_INVALID_INPUT)
 		return
