@@ -126,7 +126,7 @@ func (s *ItemWebService) GetItemLog(request *restful.Request, response *restful.
 	sid := request.PathParameter("id")
 	id, err := strconv.ParseUint(sid, 10, 64)
 	if err != nil {
-		response.WriteErrorString(http.StatusNotFound, ERROR_INVALID_ID)
+		response.WriteErrorString(http.StatusBadRequest, ERROR_INVALID_ID)
 		log.Info(err)
 		return
 	}
@@ -171,13 +171,13 @@ func (s *ItemWebService) UpdateItem(request *restful.Request, response *restful.
 	itm := new(db.Item)
 	err := request.ReadEntity(itm)
 	if err != nil {
-		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
-		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_INTERNAL)
+		response.WriteErrorString(http.StatusBadRequest, ERROR_INVALID_ID)
+		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_INVALID_ID)
 		return
 	}
 	i, err := s.d.GetItemById(itm.EID)
 	if err != nil {
-		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
+		response.WriteErrorString(http.StatusNotFound, ERROR_INVALID_ID)
 		log.Warn(err)
 		return
 	}
@@ -199,7 +199,7 @@ func (s *ItemWebService) DeleteItem(request *restful.Request, response *restful.
 	if err != nil {
 		//TODO
 		log.WithFields(log.Fields{"Error Msg": err}).Info(ERROR_INVALID_ID)
-		response.WriteErrorString(http.StatusNotFound, ERROR_INVALID_ID)
+		response.WriteErrorString(http.StatusBadRequest, ERROR_INVALID_ID)
 		return
 	}
 
