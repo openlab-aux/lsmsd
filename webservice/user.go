@@ -135,6 +135,11 @@ func (p *UserWebService) UpdateUser(request *restful.Request, response *restful.
 		log.WithFields(log.Fields{"Error Msg": err}).Warn(ERROR_INVALID_INPUT)
 		return
 	}
+	if usr.Name != request.Attribute("User").(string) {
+		log.WithFields(log.Fields{"User": request.Attribute("User").(string), "attempted to update": usr.Name}).Warn("Unauthorized update request")
+		response.WriteErrorString(http.StatusForbidden, "Request not allowed")
+		return
+	}
 
 	ex := p.d.CheckUserExistance(usr)
 	if ex {
