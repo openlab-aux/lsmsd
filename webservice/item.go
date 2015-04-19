@@ -321,7 +321,7 @@ func (s *ItemWebService) AttachImage(req *restful.Request, res *restful.Response
 		res.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
 		return
 	}
-	err = s.d.AddImage(id, im)
+	err = s.d.AddImage(id, im, req.Attribute("User").(string))
 	if err != nil {
 		log.Debug(err)
 		res.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
@@ -360,7 +360,7 @@ func (s *ItemWebService) RemoveImage(req *restful.Request, res *restful.Response
 		return
 	}
 
-	err = s.d.RemoveImage(id, bson.ObjectId(imgid))
+	err = s.d.RemoveImage(id, bson.ObjectId(imgid), req.Attribute("User").(string))
 	if err != nil {
 		log.Debug(err)
 		res.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)

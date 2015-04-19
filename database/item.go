@@ -20,6 +20,7 @@
 package database
 
 import (
+	"encoding/hex"
 	log "github.com/Sirupsen/logrus"
 	dmp "github.com/sergi/go-diff/diffmatchpatch"
 	"gopkg.in/mgo.v2"
@@ -88,12 +89,36 @@ func (p *ItemDBProvider) UpdateItem(itm *Item, ih *ItemHistory) error {
 	return p.c.Update(bson.M{"eid": itm.EID}, itm)
 }
 
-func (p *ItemDBProvider) AddImage(id uint64, ref bson.ObjectId) error {
+func (p *ItemDBProvider) AddImage(id uint64, ref bson.ObjectId, user string) error {
+	ih := new(ItemHistory)
+	ih.User = user
+	ih.Timestamp = time.Now()
+	ih.Item = make(map[string]interface{})
+	ih.Item["eid"] = id
+	ih.Item["images"] = bson.M{hex.EncodeToString([]byte(ref)): dmp.DiffInsert}
+
+	err := p.ch.Insert(ih)
+	if err != nil {
+		log.Debug(err)
+		return err
+	}
+
 	return p.c.Update(bson.M{"eid": id}, bson.M{"$addToSet": bson.M{"images": ref}})
 }
 
-func (p *ItemDBProvider) RemoveImage(id uint64, ref bson.ObjectId) error {
-	log.Debug(id, ref)
+func (p *ItemDBProvider) RemoveImage(id uint64, ref bson.ObjectId, user string) error {
+	ih := new(ItemHistory)
+	ih.User = user
+	ih.Timestamp = time.Now()
+	ih.Item = make(map[string]interface{})
+	ih.Item["eid"] = id
+	ih.Item["images"] = bson.M{hex.EncodeToString([]byte(ref)): dmp.DiffDelete}
+
+	err := p.ch.Insert(ih)
+	if err != nil {
+		log.Debug(err)
+		return err
+	}
 	return p.c.Update(bson.M{"eid": id}, bson.M{"$pull": bson.M{"images": ref}})
 }
 
