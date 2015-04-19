@@ -161,10 +161,10 @@ func main() {
 	log.Info("Connection successful")
 	defer s.Close()
 
-	itemp := db.NewItemDBProvider(s, cfg.Database.DB)
+	imgp := db.NewImageDBProvider(s, cfg.Database.DB)
+	itemp := db.NewItemDBProvider(s, cfg.Database.DB, imgp)
 	polp := db.NewPolicyDBProvider(s, cfg.Database.DB)
 	userp := db.NewUserDBProvider(s, itemp, polp, cfg.Database.DB)
-	imgp := db.NewImageDBProvider(s, cfg.Database.DB)
 	auth := webservice.NewBasicAuthService(userp)
 	iws := webservice.NewItemWebService(itemp, imgp, auth)
 	pws := webservice.NewPolicyService(polp, auth)

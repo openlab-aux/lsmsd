@@ -49,10 +49,11 @@ func newTestContainer() (*mgo.Session, *restful.Container, *db.ItemDBProvider, *
 	cont := restful.NewContainer()
 
 	db.ReadPepper("/tmp/lsmsd_test_pepper")
-	itemp := db.NewItemDBProvider(s, "lsmsd_test")
+	imgp := db.NewImageDBProvider(s, "lsmsd_test")
+
+	itemp := db.NewItemDBProvider(s, "lsmsd_test", imgp)
 	polp := db.NewPolicyDBProvider(s, "lsmsd_test")
 	userp := db.NewUserDBProvider(s, itemp, polp, "lsmsd_test")
-	imgp := db.NewImageDBProvider(s, "lsmsd_test")
 	auth := webservice.NewBasicAuthService(userp)
 	iws := webservice.NewItemWebService(itemp, imgp, auth)
 	pws := webservice.NewPolicyService(polp, auth)

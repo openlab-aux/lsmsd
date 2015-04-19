@@ -32,13 +32,15 @@ import (
 type ItemDBProvider struct {
 	c     *mgo.Collection
 	ch    *mgo.Collection
+	img   *ImageDBProvider
 	idgen *idgenerator
 }
 
-func NewItemDBProvider(s *mgo.Session, dbname string) *ItemDBProvider {
+func NewItemDBProvider(s *mgo.Session, dbname string, img *ImageDBProvider) *ItemDBProvider {
 	res := new(ItemDBProvider)
 	res.c = s.DB(dbname).C("item")
 	res.ch = s.DB(dbname).C("item_history")
+	res.img = img
 	res.idgen = NewIDGenerator(s.DB(dbname).C("counters"))
 	return res
 }
@@ -142,6 +144,14 @@ func (p *ItemDBProvider) DeleteItem(itm *Item, ih *ItemHistory) error {
 	if err != nil {
 		return err
 	}
+
+	for i := 0; i != len(itm.Images); i++ {
+		err := p.img.Remove(itm.Images[i])
+		if err != nil {
+			return err
+		}
+	}
+
 	return p.c.Remove(bson.M{"eid": itm.EID})
 }
 
