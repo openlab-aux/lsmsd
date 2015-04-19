@@ -88,6 +88,15 @@ func (p *ItemDBProvider) UpdateItem(itm *Item, ih *ItemHistory) error {
 	return p.c.Update(bson.M{"eid": itm.EID}, itm)
 }
 
+func (p *ItemDBProvider) AddImage(id uint64, ref bson.ObjectId) error {
+	return p.c.Update(bson.M{"eid": id}, bson.M{"$addToSet": bson.M{"images": ref}})
+}
+
+func (p *ItemDBProvider) RemoveImage(id uint64, ref bson.ObjectId) error {
+	log.Debug(id, ref)
+	return p.c.Update(bson.M{"eid": id}, bson.M{"$pull": bson.M{"images": ref}})
+}
+
 func (p *ItemDBProvider) CheckItemExistance(itm *Item) bool {
 	temp := Item{}
 	err := p.c.Find(bson.M{"eid": itm.EID}).One(&temp)
@@ -112,15 +121,16 @@ func (p *ItemDBProvider) DeleteItem(itm *Item, ih *ItemHistory) error {
 }
 
 type Item struct {
-	ID          bson.ObjectId `bson:"_id,omitempty" json:"-"`
-	EID         uint64        `json:"Id"`
-	Name        string        `bson:",omitempty"`
-	Description string        `bson:",omitempty" description:"This string should be in Github Flavored Markdown"`
-	Contains    []uint64      `bson:",omitempty"`
-	Owner       string        `bson:",omitempty"`
-	Maintainer  string        `bson:",omitempty"`
-	Usage       string        `bson:",omitempty"`
-	Discard     string        `bson:",omitempty"`
+	ID          bson.ObjectId   `bson:"_id,omitempty" json:"-"`
+	EID         uint64          `json:"Id"`
+	Name        string          `bson:",omitempty"`
+	Description string          `bson:",omitempty" description:"This string should be in Github Flavored Markdown"`
+	Contains    []uint64        `bson:",omitempty"`
+	Owner       string          `bson:",omitempty"`
+	Maintainer  string          `bson:",omitempty"`
+	Usage       string          `bson:",omitempty"`
+	Discard     string          `bson:",omitempty"`
+	Images      []bson.ObjectId `bson:",omitempty"`
 }
 
 type ItemHistory struct {

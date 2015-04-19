@@ -148,6 +148,8 @@ func main() {
 	switch cfg.Logging.Level {
 	case "Debug":
 		log.SetLevel(log.DebugLevel)
+		restful.TraceLogger(log.StandardLogger())
+		restful.EnableTracing(true)
 	}
 
 	// Test DB Connection
@@ -162,15 +164,18 @@ func main() {
 	itemp := db.NewItemDBProvider(s, cfg.Database.DB)
 	polp := db.NewPolicyDBProvider(s, cfg.Database.DB)
 	userp := db.NewUserDBProvider(s, itemp, polp, cfg.Database.DB)
+	imgp := db.NewImageDBProvider(s, cfg.Database.DB)
 	auth := webservice.NewBasicAuthService(userp)
-	iws := webservice.NewItemWebService(itemp, auth)
+	iws := webservice.NewItemWebService(itemp, imgp, auth)
 	pws := webservice.NewPolicyService(polp, auth)
 	uws := webservice.NewUserService(userp, auth)
+	imws := webservice.NewImageService(imgp)
 
 	restful.DefaultContainer.Filter(restful.DefaultContainer.OPTIONSFilter)
 	restful.Add(iws.S)
 	restful.Add(pws.S)
 	restful.Add(uws.S)
+	restful.Add(imws.S)
 
 	if log.GetLevel() == log.DebugLevel {
 		restful.DefaultContainer.Filter(webservice.DebugLoggingFilter)

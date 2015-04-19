@@ -28,19 +28,28 @@ import (
 	"net/http"
 	"strconv"
 	//"strings"
+	"bytes"
+	"encoding/hex"
 	db "github.com/openlab-aux/lsmsd/database"
+	"gopkg.in/mgo.v2/bson"
+	"image/gif"
+	"image/jpeg"
+	"image/png"
+	"io/ioutil"
 )
 
 type ItemWebService struct {
 	d *db.ItemDBProvider
 	S *restful.WebService
 	a *BasicAuthService
+	i *db.ImageDBProvider
 }
 
-func NewItemWebService(d *db.ItemDBProvider, a *BasicAuthService) *ItemWebService {
+func NewItemWebService(d *db.ItemDBProvider, i *db.ImageDBProvider, a *BasicAuthService) *ItemWebService {
 	res := new(ItemWebService)
 	res.d = d
 	res.a = a
+	res.i = i
 
 	service := new(restful.WebService)
 	service.
@@ -90,6 +99,22 @@ func NewItemWebService(d *db.ItemDBProvider, a *BasicAuthService) *ItemWebServic
 		Reads(db.Item{}).
 		Returns(http.StatusOK, "Insert successful", "/items/{id}").
 		Do(returnsInternalServerError, returnsBadRequest))
+
+	service.Route(service.POST("/{id}/image").
+		Filter(res.a.Auth).
+		Param(restful.BodyParameter("image", "Your png, jpeg or gif.")).
+		Doc("Attach a image to this item").
+		To(res.AttachImage).
+		Consumes("image/png", "image/jpeg", "image/gif").
+		Do(returnsInternalServerError, returnsNotFound, returnsBadRequest))
+
+	service.Route(service.DELETE("/{id}/image/{imageid}").
+		Filter(res.a.Auth).
+		Param(restful.PathParameter("id", "Item ID")).
+		Param(restful.PathParameter("imageid", "Image identifier")).
+		Doc("Remove a image from this item").
+		To(res.RemoveImage).
+		Do(returnsInternalServerError, returnsNotFound, returnsBadRequest))
 
 	service.Route(service.DELETE("/{id}").
 		Filter(res.a.Auth).
@@ -228,4 +253,117 @@ func (s *ItemWebService) DeleteItem(request *restful.Request, response *restful.
 func (s *ItemWebService) NotAnEasterEgg(req *restful.Request, res *restful.Response) {
 	res.WriteErrorString(http.StatusTeapot, "Try some mate tea")
 	return
+}
+
+func (s *ItemWebService) AttachImage(req *restful.Request, res *restful.Response) {
+	sid := req.PathParameter("id")
+	id, err := strconv.ParseUint(sid, 10, 64)
+	if err != nil {
+		log.Debug(err)
+		res.WriteErrorString(http.StatusBadRequest, ERROR_INVALID_ID)
+		return
+	}
+
+	if !s.d.CheckItemExistance(&db.Item{EID: id}) {
+		log.Debug(err)
+		res.WriteErrorString(http.StatusNotFound, ERROR_INVALID_ID)
+		return
+	}
+
+	_body, err := ioutil.ReadAll(req.Request.Body)
+
+	if err != nil {
+		log.Debug(err)
+		res.WriteErrorString(http.StatusBadRequest, "")
+		return
+	}
+
+	body := bytes.NewReader(_body)
+
+	switch req.HeaderParameter("Content-Type") {
+	case "image/png":
+		log.Println("png")
+		_, err := png.Decode(body)
+		if err != nil {
+			log.Debug(err)
+			res.WriteErrorString(http.StatusBadRequest, "")
+			return
+		}
+		body.Seek(0, 0)
+
+	case "image/jpeg":
+		log.Println("jpeg")
+		_, err := jpeg.Decode(body)
+		if err != nil {
+			log.Debug(err)
+			res.WriteErrorString(http.StatusBadRequest, "")
+			return
+		}
+		body.Seek(0, 0)
+
+	case "image/gif":
+		log.Println("gif")
+		_, err := gif.Decode(body)
+		if err != nil {
+			log.Debug(err)
+			res.WriteErrorString(http.StatusBadRequest, "")
+			return
+		}
+		body.Seek(0, 0)
+
+	default:
+		//TODO
+		log.Debug("none")
+	}
+	im, err := s.i.Create(body, req.Attribute("User").(string), req.HeaderParameter("Content-Type"), id)
+	if err != nil {
+		log.Debug(err)
+		res.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
+		return
+	}
+	err = s.d.AddImage(id, im)
+	if err != nil {
+		log.Debug(err)
+		res.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
+		return
+	}
+	return
+}
+
+func (s *ItemWebService) RemoveImage(req *restful.Request, res *restful.Response) {
+	sid := req.PathParameter("id")
+	id, err := strconv.ParseUint(sid, 10, 64)
+	if err != nil {
+		log.Debug(err)
+		res.WriteErrorString(http.StatusBadRequest, ERROR_INVALID_ID)
+		return
+	}
+
+	simgid := req.PathParameter("imageid")
+	imgid, err := hex.DecodeString(simgid)
+	if err != nil {
+		log.Debug(err)
+		res.WriteErrorString(http.StatusBadRequest, ERROR_INVALID_ID)
+		return
+	}
+
+	if !s.d.CheckItemExistance(&db.Item{EID: id}) {
+		log.Debug(err)
+		res.WriteErrorString(http.StatusNotFound, ERROR_INVALID_ID)
+		return
+	}
+
+	err = s.i.Remove(bson.ObjectId(imgid))
+	if err != nil {
+		log.Debug(err)
+		res.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
+		return
+	}
+
+	err = s.d.RemoveImage(id, bson.ObjectId(imgid))
+	if err != nil {
+		log.Debug(err)
+		res.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
+		return
+	}
 }

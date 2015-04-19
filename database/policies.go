@@ -16,6 +16,7 @@
  *
  *    Authors: Stefan Luecke <glaxx@glaxx.net>
  */
+
 package database
 
 import (
