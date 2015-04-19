@@ -16,7 +16,7 @@ ___
   * Better test coverage & code documentation
   * Websockets
   * Manual
-  * Item images (GridFS)
+  * ~~Item images (GridFS)~~
 
 ___
 # Documentation
