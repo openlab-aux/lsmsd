@@ -165,9 +165,10 @@ func main() {
 	itemp := db.NewItemDBProvider(s, cfg.Database.DB, imgp)
 	polp := db.NewPolicyDBProvider(s, cfg.Database.DB)
 	userp := db.NewUserDBProvider(s, itemp, polp, cfg.Database.DB)
+	us := webservice.NewUpdateService()
 	auth := webservice.NewBasicAuthService(userp)
-	iws := webservice.NewItemWebService(itemp, imgp, auth)
-	pws := webservice.NewPolicyService(polp, auth)
+	iws := webservice.NewItemWebService(itemp, imgp, auth, us)
+	pws := webservice.NewPolicyService(polp, auth, us)
 	uws := webservice.NewUserService(userp, auth)
 	imws := webservice.NewImageService(imgp)
 
@@ -176,6 +177,7 @@ func main() {
 	restful.Add(pws.S)
 	restful.Add(uws.S)
 	restful.Add(imws.S)
+	restful.Add(us.S)
 
 	if log.GetLevel() == log.DebugLevel {
 		restful.DefaultContainer.Filter(webservice.DebugLoggingFilter)

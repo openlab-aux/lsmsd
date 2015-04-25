@@ -43,13 +43,15 @@ type ItemWebService struct {
 	S *restful.WebService
 	a *BasicAuthService
 	i *db.ImageDBProvider
+	u *UpdateService
 }
 
-func NewItemWebService(d *db.ItemDBProvider, i *db.ImageDBProvider, a *BasicAuthService) *ItemWebService {
+func NewItemWebService(d *db.ItemDBProvider, i *db.ImageDBProvider, a *BasicAuthService, u *UpdateService) *ItemWebService {
 	res := new(ItemWebService)
 	res.d = d
 	res.a = a
 	res.i = i
+	res.u = u
 
 	service := new(restful.WebService)
 	service.
@@ -214,6 +216,8 @@ func (s *ItemWebService) UpdateItem(request *restful.Request, response *restful.
 		log.Warn(err)
 		return
 	}
+
+	s.u.PushUpdate(h)
 	response.WriteEntity(true)
 	return
 }
@@ -247,6 +251,8 @@ func (s *ItemWebService) DeleteItem(request *restful.Request, response *restful.
 		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
 		return
 	}
+	s.u.PushUpdate(h)
+
 	response.WriteEntity(true)
 }
 

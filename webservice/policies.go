@@ -33,12 +33,14 @@ type PolicyWebService struct {
 	d *db.PolicyDBProvider
 	S *restful.WebService
 	a *BasicAuthService
+	u *UpdateService
 }
 
-func NewPolicyService(d *db.PolicyDBProvider, a *BasicAuthService) *PolicyWebService {
+func NewPolicyService(d *db.PolicyDBProvider, a *BasicAuthService, u *UpdateService) *PolicyWebService {
 	res := new(PolicyWebService)
 	res.d = d
 	res.a = a
+	res.u = u
 
 	service := new(restful.WebService)
 	service.
@@ -150,6 +152,7 @@ func (p *PolicyWebService) UpdatePolicy(request *restful.Request, response *rest
 		log.Warn(err)
 		return
 	}
+	p.u.PushUpdate(h)
 	response.WriteEntity(true)
 }
 
@@ -200,5 +203,6 @@ func (p *PolicyWebService) DeletePolicy(request *restful.Request, response *rest
 		response.WriteErrorString(http.StatusInternalServerError, ERROR_INTERNAL)
 		return
 	}
+	p.u.PushUpdate(h)
 	response.WriteEntity(true)
 }
