@@ -180,6 +180,7 @@ func (i *Item) NewItemHistory(it *Item, user string) *ItemHistory {
 	res.Item = make(map[string]interface{})
 	res.Item["eid"] = i.EID
 	res.User = user
+	res.Timestamp = time.Now()
 
 	if it == nil {
 		res.Item["deleted"] = true

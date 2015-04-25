@@ -57,6 +57,7 @@ func (p *Policy) NewPolicyHistory(po *Policy, user string) *PolicyHistory {
 	res.Policy = make(map[string]interface{})
 	res.User = user
 	res.Policy["name"] = p.Name
+	res.Timestamp = time.Now()
 
 	if po == nil {
 		res.Policy["deleted"] = true
