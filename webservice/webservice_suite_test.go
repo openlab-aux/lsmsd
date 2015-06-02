@@ -72,12 +72,11 @@ func populateDB(itm *db.ItemDBProvider, pol *db.PolicyDBProvider, usr *db.UserDB
 }
 
 func populateItemDB(itm *db.ItemDBProvider) {
-	var lastid uint64
 	for i := 0; i != 10; i++ {
 		i := db.Item{
 			Name:        "test" + strconv.Itoa(i),
 			Description: "testdesc",
-			Contains:    []uint64{lastid},
+			Parent:      0,
 			Owner:       "testuser",
 			Maintainer:  "testuser",
 			Usage:       "testpolicy",
@@ -85,7 +84,7 @@ func populateItemDB(itm *db.ItemDBProvider) {
 		}
 
 		var err error
-		lastid, err = itm.CreateItem(&i)
+		_, err = itm.CreateItem(&i)
 		if err != nil {
 			Fail("could not populate item db: " + err.Error())
 		}

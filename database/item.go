@@ -160,7 +160,7 @@ type Item struct {
 	EID         uint64          `json:"Id"`
 	Name        string          `bson:",omitempty"`
 	Description string          `bson:",omitempty" description:"This string should be in Github Flavored Markdown"`
-	Contains    []uint64        `bson:",omitempty"`
+	Parent      uint64          `bson:",omitempty"`
 	Owner       string          `bson:",omitempty"`
 	Maintainer  string          `bson:",omitempty"`
 	Usage       string          `bson:",omitempty"`
@@ -195,9 +195,8 @@ func (i *Item) NewItemHistory(it *Item, user string) *ItemHistory {
 		d.DiffTimeout = 200 * time.Millisecond
 		res.Item["description"] = d.DiffMain(i.Description, it.Description, true)
 	}
-	condiff := uint64Diff(i.Contains, it.Contains)
-	if len(condiff) > 0 {
-		res.Item["contains"] = condiff
+	if i.Parent != it.Parent {
+		res.Item["parent"] = it.Parent
 	}
 	if i.Owner != it.Owner {
 		res.Item["owner"] = it.Owner
