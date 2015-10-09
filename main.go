@@ -30,8 +30,8 @@ import (
 
 	"net/http"
 	//	"time"
-	"code.google.com/p/gcfg"
 	"github.com/emicklei/go-restful/swagger"
+	"gopkg.in/gcfg.v1"
 	"gopkg.in/mgo.v2"
 )
 
