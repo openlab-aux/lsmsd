@@ -37,4 +37,4 @@ Code Documentation for this tool can be found at [godoc](http://godoc.org/github
 # REST-Api Documentation
 
 This project uses swagger to document its API.
-Just run lsmsd and open http[s]://[whereitlistens]:[PORT]/apidocs/ and type http[s]://[whereitlistens]:[PORT]/apidocs.json into the textfield at the top of the page.
+Just run lsmsd and open `http[s]://[whereitlistens]:[PORT]/apidocs/` and type `http[s]://[whereitlistens]:[PORT]/apidocs.json` into the textfield at the top of the page.
