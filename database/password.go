@@ -23,7 +23,7 @@ import (
 	"crypto/rand"
 	"crypto/sha512"
 	"errors"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"os"
 )
 

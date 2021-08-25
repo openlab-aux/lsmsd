@@ -20,7 +20,7 @@
 package database
 
 import (
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	dmp "github.com/sergi/go-diff/diffmatchpatch"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"

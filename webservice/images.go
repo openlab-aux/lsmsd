@@ -21,7 +21,7 @@ package webservice
 
 import (
 	"encoding/hex"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/emicklei/go-restful"
 	db "github.com/openlab-aux/lsmsd/database"
 	"gopkg.in/mgo.v2"

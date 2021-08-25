@@ -21,7 +21,7 @@ package webservice
 
 import (
 	//"crypto/sha512"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/emicklei/go-restful"
 	//	"gopkg.in/mgo.v2/bson"
 	db "github.com/openlab-aux/lsmsd/database"

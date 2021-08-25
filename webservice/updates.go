@@ -20,7 +20,7 @@
 package webservice
 
 import (
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/emicklei/go-restful"
 	db "github.com/openlab-aux/lsmsd/database"
 	"github.com/trevex/golem"
