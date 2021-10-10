@@ -1,0 +1,26 @@
+version: "3.9"
+services:
+  webclient:
+    build:
+      context: ./
+      dockerfile: Frickelclient.Dockerfile
+    ports:
+      - "5000:5000"
+    volumes:
+      - type: bind
+        source: ./config.py
+        target: /opt/frickelclient/frickelclient/config.py
+
+  lsmsd:
+    build: ../../
+    volumes:
+      - type: bind
+        source: ./config.gcfg
+        target: /config.gcfg
+    ports:
+      - "8080:8080"
+
+  mongo:
+    image: docker.io/library/mongo
+    ports:
+      - 27017
